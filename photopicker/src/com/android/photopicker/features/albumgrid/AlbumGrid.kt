@@ -30,8 +30,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.android.photopicker.R
@@ -182,7 +180,6 @@ fun AlbumGridNavButton(modifier: Modifier) {
     val events = LocalEvents.current
     val sessionId = LocalPhotopickerConfiguration.current.sessionId
     val packageUid = LocalPhotopickerConfiguration.current.callingPackageUid ?: -1
-    val contentDescriptionString = stringResource(R.string.photopicker_albums_nav_button_label)
 
     NavigationBarButton(
         onClick = {
@@ -199,7 +196,7 @@ fun AlbumGridNavButton(modifier: Modifier) {
             }
             navController.navigateToAlbumGrid()
         },
-        modifier = modifier.semantics { contentDescription = contentDescriptionString },
+        modifier = modifier,
         isCurrentRoute = { route -> route == PhotopickerDestinations.ALBUM_GRID.route },
     ) {
         Text(stringResource(R.string.photopicker_albums_nav_button_label))

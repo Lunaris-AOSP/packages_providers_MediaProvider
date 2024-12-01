@@ -38,7 +38,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -204,7 +203,6 @@ fun CategoryButton(modifier: Modifier) {
     val events = LocalEvents.current
     val sessionId = LocalPhotopickerConfiguration.current.sessionId
     val packageUid = LocalPhotopickerConfiguration.current.callingPackageUid ?: -1
-    val contentDescriptionString = stringResource(R.string.photopicker_categories_nav_button_label)
     val featureManager = LocalFeatureManager.current
     val searchFeatureEnabled = featureManager.isFeatureEnabled(SearchFeature::class.java)
 
@@ -223,7 +221,7 @@ fun CategoryButton(modifier: Modifier) {
             }
             navController.navigateToCategoryGrid()
         },
-        modifier = modifier.semantics { contentDescription = contentDescriptionString },
+        modifier = modifier,
         isCurrentRoute = { route -> route == PhotopickerDestinations.ALBUM_GRID.route },
     ) {
         when {
@@ -232,7 +230,7 @@ fun CategoryButton(modifier: Modifier) {
                     Icon(
                         imageVector =
                             ImageVector.vectorResource(R.drawable.photopicker_category_icon),
-                        contentDescription = contentDescriptionString,
+                        contentDescription = null,
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
