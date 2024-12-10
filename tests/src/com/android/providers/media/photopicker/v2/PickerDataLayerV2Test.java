@@ -16,6 +16,8 @@
 
 package com.android.providers.media.photopicker.v2;
 
+import static android.provider.MediaStore.PER_USER_RANGE;
+
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.ALBUM_ID;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.CLOUD_ID;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.CLOUD_ID_1;
@@ -467,7 +469,12 @@ public class PickerDataLayerV2Test {
                 /* writeCount */1);
         assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursorForMediaWithGrants,
                 /* writeCount */1);
-        int testUid = 123;
+        // testUid should be selected such that the userId computed from this uid later in the code
+        // flow matches the current userId. UserId is computed using
+        // PickerSyncController#uidToUser() where the userId = uid / PER_USER_RANGE.
+        // So testUid is =
+        // (a random number smaller than PER_USER_RANGE) + (PER_USER_RANGE * UserHandle.myUserId())
+        int testUid = 11 + (PER_USER_RANGE * UserHandle.myUserId());
         doReturn(mMockPackageManager)
                 .when(mMockContext).getPackageManager();
         String[] packageNames = new String[]{TEST_PACKAGE_NAME};
@@ -522,7 +529,12 @@ public class PickerDataLayerV2Test {
         assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursorForMediaWithGrantsButDeSelected,
                 /* writeCount */1);
 
-        int testUid = 123;
+        // testUid should be selected such that the userId computed from this uid later in the code
+        // flow matches the current userId. UserId is computed using
+        // PickerSyncController#uidToUser() where the userId = uid / PER_USER_RANGE.
+        // So testUid is =
+        // (a random number smaller than PER_USER_RANGE) + (PER_USER_RANGE * UserHandle.myUserId())
+        int testUid = 11 + (PER_USER_RANGE * UserHandle.myUserId());
         doReturn(mMockPackageManager)
                 .when(mMockContext).getPackageManager();
         String[] packageNames = new String[]{TEST_PACKAGE_NAME};
