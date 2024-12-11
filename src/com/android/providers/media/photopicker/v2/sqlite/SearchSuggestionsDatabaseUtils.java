@@ -62,6 +62,7 @@ public class SearchSuggestionsDatabaseUtils {
             @NonNull SearchRequest searchRequest) {
         requireNonNull(database);
         requireNonNull(searchRequest);
+        Log.d(TAG, "Saving search history: " + searchRequest);
 
         try {
             // Note that CONFLICT_REPLACE create a new row in case of a conflict so the
@@ -260,6 +261,7 @@ public class SearchSuggestionsDatabaseUtils {
             } while (cursor.moveToNext());
         }
 
+        Log.d(TAG, "Extracted suggestions from cursor: " + searchSuggestions);
         return searchSuggestions;
     }
 

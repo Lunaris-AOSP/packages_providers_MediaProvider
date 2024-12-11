@@ -766,11 +766,13 @@ public class PickerDataLayerV2 {
         final SearchState searchState = PickerSyncController.getInstanceOrThrow().getSearchState();
 
         if (localAuthority != null) {
+            Log.d(TAG, "Waiting for local search results");
             SyncCompletionWaiter.waitForSyncWithTimeout(
                     SyncTrackerRegistry.getLocalSearchSyncTracker(), /* timeoutInMillis */ 500);
         }
 
         if (cloudAuthority != null) {
+            Log.d(TAG, "Waiting for cloud search results");
             SyncCompletionWaiter.waitForSyncWithTimeout(
                     SyncTrackerRegistry.getCloudSearchSyncTracker(), /* timeoutInMillis */ 3000);
         }
@@ -1180,6 +1182,7 @@ public class PickerDataLayerV2 {
                                                 @NonNull Executor executor,
                                                 @NonNull WorkManager workManager) {
         requireNonNull(extras);
+        Log.d(TAG, "Received a search request: " + extras);
 
         final SearchRequest searchRequest = SearchRequest.create(extras);
         final SQLiteDatabase database = PickerSyncController.getInstanceOrThrow().getDbFacade()
@@ -1201,6 +1204,7 @@ public class PickerDataLayerV2 {
             scheduleSearchResultsSync(appContext, searchRequest, searchRequestId, extras,
                     workManager);
 
+            Log.d(TAG, "Returning search request id: " + searchRequestId);
             return getSearchRequestInitResponse(searchRequestId);
         }
     }
@@ -1328,6 +1332,7 @@ public class PickerDataLayerV2 {
             }
         }
 
+        Log.d(TAG, "Scheduling search results syc with local provider: " + searchRequestId);
         syncManager.syncSearchResultsForProvider(
                 searchRequestId,
                 PickerSyncManager.SYNC_LOCAL_ONLY,
@@ -1373,6 +1378,7 @@ public class PickerDataLayerV2 {
             }
         }
 
+        Log.d(TAG, "Scheduling search results syc with cloud provider: " + searchRequestId);
         syncManager.syncSearchResultsForProvider(
                 searchRequestId,
                 PickerSyncManager.SYNC_CLOUD_ONLY,
