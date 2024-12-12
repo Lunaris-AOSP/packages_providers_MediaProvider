@@ -73,6 +73,7 @@ import static org.junit.Assert.fail;
 import android.content.ContentValues;
 import android.os.Environment;
 import android.os.SystemProperties;
+import android.os.UserHandle;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Audio.AudioColumns;
 import android.provider.MediaStore.MediaColumns;
@@ -1219,13 +1220,18 @@ public class FileUtilsTest {
 
     @Test
     public void testToAndFromFuseFile() throws Exception {
-        final File fuseFilePrimary = new File("/mnt/user/0/emulated/0/foo");
-        final File fuseFileSecondary = new File("/mnt/user/0/0000-0000/foo");
+        int userId = UserHandle.myUserId();
+        final File fuseFilePrimary = new File(
+                String.format(Locale.ROOT, "/mnt/user/%d/emulated/%d/foo", userId, userId));
+        final File fuseFileSecondary = new File(
+                String.format(Locale.ROOT, "/mnt/user/%d/0000-0000/foo", userId));
 
-        final File lowerFsFilePrimary = new File("/storage/emulated/0/foo");
+        final File lowerFsFilePrimary = new File(
+                String.format(Locale.ROOT, "/storage/emulated/%d/foo", userId));
         final File lowerFsFileSecondary = new File("/storage/0000-0000/foo");
 
-        final File unexpectedFile = new File("/mnt/pass_through/0/emulated/0/foo");
+        final File unexpectedFile = new File(
+                String.format(Locale.ROOT, "/mnt/pass_through/%d/emulated/%d/foo", userId, userId));
 
         assertThat(fromFuseFile(fuseFilePrimary)).isEqualTo(lowerFsFilePrimary);
         assertThat(fromFuseFile(fuseFileSecondary)).isEqualTo(lowerFsFileSecondary);
