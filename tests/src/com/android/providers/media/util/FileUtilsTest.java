@@ -936,8 +936,9 @@ public class FileUtilsTest {
     // Visibility of default dirs is tested in ModernMediaScannerTest#testVisibleDefaultFolders.
     @Test
     public void testIsDirectoryHidden() throws Exception {
+        int userId = UserHandle.myUserId();
         for (String prefix : new String[] {
-                "/storage/emulated/0",
+                String.format(Locale.ROOT, "/storage/emulated/%d", userId),
                 "/storage/0000-0000",
         }) {
             assertDirectoryNotHidden(new File(prefix));
@@ -946,7 +947,9 @@ public class FileUtilsTest {
             assertDirectoryHidden(new File(prefix + "/.meow"));
         }
 
-        final File nomediaFile = new File("storage/emulated/0/Download/meow", ".nomedia");
+        final File nomediaFile = new File(
+                String.format(Locale.ROOT, "storage/emulated/%d/Download/meow", userId),
+                ".nomedia");
         try {
             assertTrue(nomediaFile.getParentFile().mkdirs());
             assertTrue(nomediaFile.createNewFile());
