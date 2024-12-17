@@ -335,7 +335,6 @@ import com.android.providers.media.util.SQLiteQueryBuilder;
 import com.android.providers.media.util.SpecialFormatDetector;
 import com.android.providers.media.util.StringUtils;
 import com.android.providers.media.util.UserCache;
-import com.android.providers.media.util.XAttrUtils;
 
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
@@ -10575,23 +10574,8 @@ public class MediaProvider extends ContentProvider {
                 return new FileOpenResult(OsConstants.EACCES /* status */, originalUid,
                         mediaCapabilitiesUid, new long[0]);
             }
-            // TODO: Fetch owner id from Android/media directory and check if caller is owner
-            FileAccessAttributes fileAttributes = null;
-            if (XAttrUtils.ENABLE_XATTR_METADATA_FOR_FUSE) {
-                Optional<FileAccessAttributes> fileAttributesThroughXattr =
-                        XAttrUtils.getFileAttributesFromXAttr(path,
-                                XAttrUtils.FILE_ACCESS_XATTR_KEY);
-                if (fileAttributesThroughXattr.isPresent()) {
-                    fileAttributes = fileAttributesThroughXattr.get();
-                }
-            }
 
-            // FileAttributes will be null if the xattr call failed or the flag to enable xattr
-            // metadata support is not set
-            if (fileAttributes == null)  {
-                fileAttributes = queryForFileAttributes(path);
-            }
-            checkIfFileOpenIsPermitted(path, fileAttributes, redactedUriId, forWrite);
+            checkIfFileOpenIsPermitted(path, queryForFileAttributes(path), redactedUriId, forWrite);
             isSuccess = true;
             return new FileOpenResult(0 /* status */, originalUid, mediaCapabilitiesUid,
                     redact ? getRedactionRangesForFuse(path, ioPath, originalUid, uid, tid,
