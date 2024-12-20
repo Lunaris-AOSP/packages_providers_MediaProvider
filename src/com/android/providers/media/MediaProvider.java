@@ -2021,35 +2021,57 @@ public class MediaProvider extends ContentProvider {
         final long expiredTime = now + (FileUtils.DEFAULT_DURATION_EXTENDED / 1000);
         return mExternalDatabase.runWithTransaction((db) -> {
             String selection = FileColumns.DATE_EXPIRES + " < " + now;
+            selection += " AND (IS_PENDING=1 OR IS_TRASHED=1)";
             selection += " AND volume_name in " + bindList(MediaStore.getExternalVolumeNames(
                     getContext()).toArray());
             String[] projection = new String[]{"volume_name", "_id",
                     FileColumns.DATE_EXPIRES, FileColumns.DATA};
-            try (Cursor c = db.query(true, "files", projection, selection, null, null, null, null,
-                    null, signal)) {
-                int totalDeleteCount = 0;
-                int totalExtendedCount = 0;
-                int index = 0;
-                while (c.moveToNext()) {
-                    final String volumeName = c.getString(0);
-                    final long id = c.getLong(1);
-                    final long dateExpires = c.getLong(2);
-                    // we only delete the items that expire in one week
-                    if (dateExpires > expiredOneWeek) {
-                        totalDeleteCount += delete(Files.getContentUri(volumeName, id), null, null);
-                    } else {
-                        final String oriPath = c.getString(3);
+            final class TrashItem {
+                final String mVolumeName;
+                final long mId;
+                final long mDateExpires;
+                final String mOriginalPath;
 
-                        final boolean success = extendExpiredItem(db, oriPath, id, expiredTime,
-                                expiredTime + index);
-                        if (success) {
-                            totalExtendedCount++;
-                        }
-                        index++;
-                    }
+                TrashItem(String volumeName, long id, long dateExpires, String oriPath) {
+                    this.mVolumeName = volumeName;
+                    this.mId = id;
+                    this.mDateExpires = dateExpires;
+                    this.mOriginalPath = oriPath;
                 }
-                return new int[]{totalDeleteCount, totalExtendedCount};
             }
+
+            final List<TrashItem> items = new ArrayList<>();
+            try (Cursor c = db.query(true, "files", projection, selection,
+                    null, null, null, null, null, signal)) {
+                while (c.moveToNext()) {
+                    items.add(new TrashItem(
+                            c.getString(0), // volumeName
+                            c.getLong(1),   // id
+                            c.getLong(2),   // dateExpires
+                            c.getString(3)  // oriPath
+                    ));
+                }
+            }
+
+            int totalDeleteCount = 0;
+            int totalExtendedCount = 0;
+            int index = 0;
+
+            for (TrashItem item : items) {
+                if (item.mDateExpires > expiredOneWeek) {
+                    totalDeleteCount += delete(Files.getContentUri(item.mVolumeName, item.mId),
+                            null, null);
+                } else {
+                    boolean success = extendExpiredItem(db, item.mOriginalPath, item.mId,
+                            expiredTime, expiredTime + index);
+                    if (success) {
+                        totalExtendedCount++;
+                    }
+                    index++;
+                }
+            }
+
+            return new int[]{totalDeleteCount, totalExtendedCount};
         });
     }
 
