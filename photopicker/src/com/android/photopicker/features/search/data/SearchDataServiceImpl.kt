@@ -29,14 +29,15 @@ import com.android.photopicker.data.NotificationService
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
-import com.android.photopicker.features.search.model.SearchEnabledState
 import com.android.photopicker.features.search.model.SearchRequest
 import com.android.photopicker.features.search.model.SearchSuggestion
+import com.android.photopicker.features.search.model.UserSearchStateInfo
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -106,13 +107,17 @@ class SearchDataServiceImpl(
                     searchResultsPagingSources.clear()
                     searchRequestIdMap.clear()
                 }
+
+                _userSearchStateInfo.update { fetchSearchStateInfo() }
             }
         }
     }
 
-    // TODO(b/381819838)
-    override val isSearchEnabled: StateFlow<SearchEnabledState> =
-        MutableStateFlow(SearchEnabledState.ENABLED)
+    // Internal mutable flow of the current user's search state info.
+    private val _userSearchStateInfo: MutableStateFlow<UserSearchStateInfo> =
+        MutableStateFlow(UserSearchStateInfo(null))
+
+    override val userSearchStateInfo: StateFlow<UserSearchStateInfo> = _userSearchStateInfo
 
     /**
      * Try to get a list fo search suggestions from Media Provider in the background thread with a
@@ -286,5 +291,22 @@ class SearchDataServiceImpl(
                 )
             }
         }
+    }
+
+    /** Get search state info for the current user. */
+    private suspend fun fetchSearchStateInfo(): UserSearchStateInfo {
+        val contentResolver: ContentResolver = dataService.activeContentResolver.value
+        val searchProviderAuthorities: List<String>? =
+            mediaProviderClient.fetchSearchProviderAuthorities(
+                contentResolver,
+                dataService.availableProviders.value,
+            )
+        val userSearchStateInfo = UserSearchStateInfo(searchProviderAuthorities)
+        Log.d(
+            SearchDataService.TAG,
+            "Available search providers for current user $searchProviderAuthorities. " +
+                "Search state is ${userSearchStateInfo.state}",
+        )
+        return userSearchStateInfo
     }
 }

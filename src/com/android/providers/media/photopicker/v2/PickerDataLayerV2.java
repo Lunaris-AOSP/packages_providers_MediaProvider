@@ -1439,6 +1439,36 @@ public class PickerDataLayerV2 {
     }
 
     /**
+     * @param context the application context.
+     * @return a bundle with the list of available provider authorities that support the
+     * search feature. If no providers are available, return an empty list in the bundle.
+     */
+    @NonNull
+    public static Bundle getSearchProviders(@NonNull Context context) {
+        Log.d(TAG, "Calculating available search providers.");
+
+        requireNonNull(context);
+
+        // Check the state of cloud and local search.
+        final PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
+        final String cloudProvider = syncController.getCloudProviderOrDefault(null);
+        final boolean isCloudSearchEnabled =
+                syncController.getSearchState().isCloudSearchEnabled(context, cloudProvider);
+        final boolean isLocalSearchEnabled = syncController.getSearchState().isLocalSearchEnabled();
+
+        // Prepare a bundle response with the result.
+        final ArrayList<String> searchProviderAuthorities = new ArrayList<>();
+        if (isCloudSearchEnabled) searchProviderAuthorities.add(cloudProvider);
+        if (isLocalSearchEnabled) searchProviderAuthorities.add(syncController.getLocalProvider());
+
+        final Bundle result = new Bundle();
+        result.putStringArrayList(
+                PickerSQLConstants.EXTRA_SEARCH_PROVIDER_AUTHORITIES, searchProviderAuthorities);
+        Log.d(TAG, "Available search providers are: " + result);
+        return result;
+    }
+
+    /**
      * Schedules MediaSets sync for both local and cloud provider if the corresponding
      * providers implement Categories.
      * @param appContext  The application context
@@ -1598,7 +1628,7 @@ public class PickerDataLayerV2 {
     @NonNull
     private static Bundle getSearchRequestInitResponse(int searchRequestId) {
         final Bundle response = new Bundle();
-        response.putInt("search_request_id", searchRequestId);
+        response.putInt(PickerSQLConstants.EXTRA_SEARCH_REQUEST_ID, searchRequestId);
         return response;
     }
 }
