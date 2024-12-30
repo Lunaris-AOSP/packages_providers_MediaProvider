@@ -33,6 +33,7 @@ import com.android.photopicker.data.DEFAULT_SEARCH_SUGGESTIONS
 import com.android.photopicker.data.MediaProviderClient
 import com.android.photopicker.data.TestMediaProvider
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.GroupPageKey
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
@@ -528,5 +529,35 @@ class MediaProviderClientTest {
 
         assertThat(searchProviderAuthorities)
             .isEqualTo(DEFAULT_PROVIDERS.map { it.authority }.toList())
+    }
+
+    @Test
+    fun testFetchCategories() = runTest {
+        val mediaProviderClient = MediaProviderClient()
+
+        val categoriesLoadResult: LoadResult<GroupPageKey, Group> =
+            mediaProviderClient.fetchCategoriesAndAlbums(
+                pageKey = GroupPageKey(),
+                pageSize = 5,
+                contentResolver = testContentResolver,
+                availableProviders = testContentProvider.providers,
+                parentCategoryId = null,
+                config =
+                    PhotopickerConfiguration(
+                        action = MediaStore.ACTION_PICK_IMAGES,
+                        sessionId = sessionId,
+                    ),
+                CancellationSignal(),
+            )
+
+        assertThat(categoriesLoadResult is LoadResult.Page).isTrue()
+
+        val categoriesAndAlbums: List<Group> = (categoriesLoadResult as LoadResult.Page).data
+
+        val expectedCategoriesAndAlbums = testContentProvider.categoriesAndAlbums
+        assertThat(categoriesAndAlbums.count()).isEqualTo(expectedCategoriesAndAlbums.count())
+        for (index in expectedCategoriesAndAlbums.indices) {
+            assertThat(categoriesAndAlbums[index]).isEqualTo(expectedCategoriesAndAlbums[index])
+        }
     }
 }

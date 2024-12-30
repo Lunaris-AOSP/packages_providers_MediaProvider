@@ -30,13 +30,7 @@ import com.android.photopicker.data.model.MediaPageKey
  */
 class FakeCategoryDataServiceImpl(val coreDataService: DataService) : CategoryDataService {
     override fun getCategories(
-        cancellationSignal: CancellationSignal?
-    ): PagingSource<GroupPageKey, Group> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getCategories(
-        parentCategory: Group.Category,
+        parentCategory: Group.Category?,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<GroupPageKey, Group> {
         TODO("Not yet implemented")

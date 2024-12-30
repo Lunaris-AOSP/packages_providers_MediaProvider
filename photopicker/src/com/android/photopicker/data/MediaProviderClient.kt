@@ -29,6 +29,9 @@ import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.GroupPageKey
+import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.KeyToCategoryType
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
@@ -39,7 +42,7 @@ import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
 
 /**
- * A client class that is reponsible for holding logic required to interact with [MediaProvider].
+ * A client class that is responsible for holding logic required to interact with [MediaProvider].
  *
  * It typically fetches data from [MediaProvider] using content queries and call methods.
  */
@@ -75,6 +78,14 @@ open class MediaProviderClient {
      */
     private enum class AlbumMediaQuery(val key: String) {
         ALBUM_AUTHORITY("album_authority")
+    }
+
+    /**
+     * Contains all mandatory keys required to make a Category and Album query that are not present
+     * in [MediaQuery] already.
+     */
+    private enum class CategoryAndAlbumQuery(val key: String) {
+        PARENT_CATEGORY_ID("parent_category_id")
     }
 
     /**
@@ -158,6 +169,28 @@ open class MediaProviderClient {
         SUGGESTION_TYPE("suggestion_type"),
     }
 
+    enum class GroupResponse(val key: String) {
+        MEDIA_GROUP("media_group"),
+        /** Identifier received from CMP. This cannot be null. */
+        GROUP_ID("group_id"),
+        /** Identifier used in Picker Backend, if any. */
+        PICKER_ID("picker_id"),
+        DISPLAY_NAME("display_name"),
+        AUTHORITY("authority"),
+        UNWRAPPED_COVER_URI("unwrapped_cover_uri"),
+        ADDITIONAL_UNWRAPPED_COVER_URI_1("additional_cover_uri_1"),
+        ADDITIONAL_UNWRAPPED_COVER_URI_2("additional_cover_uri_2"),
+        ADDITIONAL_UNWRAPPED_COVER_URI_3("additional_cover_uri_3"),
+        CATEGORY_TYPE("category_type"),
+        IS_LEAF_CATEGORY("is_leaf_category"),
+    }
+
+    enum class GroupType() {
+        CATEGORY,
+        MEDIA_SET,
+        ALBUM,
+    }
+
     /** Fetch available [Provider]-s from the Media Provider process. */
     fun fetchAvailableProviders(contentResolver: ContentResolver): List<Provider> {
         try {
@@ -227,8 +260,8 @@ open class MediaProviderClient {
                     cursor?.let {
                         LoadResult.Page(
                             data = cursor.getListOfMedia(),
-                            prevKey = cursor.getPrevPageKey(),
-                            nextKey = cursor.getNextPageKey(),
+                            prevKey = cursor.getPrevMediaPageKey(),
+                            nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
                                 cursor.getItemsBeforeCount() ?: LoadResult.Page.COUNT_UNDEFINED,
                         )
@@ -278,8 +311,8 @@ open class MediaProviderClient {
                     cursor?.let {
                         LoadResult.Page(
                             data = cursor.getListOfMedia(),
-                            prevKey = cursor.getPrevPageKey(),
-                            nextKey = cursor.getNextPageKey(),
+                            prevKey = cursor.getPrevMediaPageKey(),
+                            nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
                                 cursor.getItemsBeforeCount() ?: LoadResult.Page.COUNT_UNDEFINED,
                         )
@@ -333,8 +366,8 @@ open class MediaProviderClient {
                     cursor?.let {
                         LoadResult.Page(
                             data = cursor.getListOfMedia(),
-                            prevKey = cursor.getPrevPageKey(),
-                            nextKey = cursor.getNextPageKey(),
+                            prevKey = cursor.getPrevMediaPageKey(),
+                            nextKey = cursor.getNextMediaPageKey(),
                         )
                     }
                         ?: throw IllegalStateException(
@@ -379,8 +412,8 @@ open class MediaProviderClient {
                     cursor?.let {
                         LoadResult.Page(
                             data = cursor.getListOfAlbums(),
-                            prevKey = cursor.getPrevPageKey(),
-                            nextKey = cursor.getNextPageKey(),
+                            prevKey = cursor.getPrevMediaPageKey(),
+                            nextKey = cursor.getNextMediaPageKey(),
                         )
                     }
                         ?: throw IllegalStateException(
@@ -429,8 +462,8 @@ open class MediaProviderClient {
                     cursor?.let {
                         LoadResult.Page(
                             data = cursor.getListOfMedia(),
-                            prevKey = cursor.getPrevPageKey(),
-                            nextKey = cursor.getNextPageKey(),
+                            prevKey = cursor.getPrevMediaPageKey(),
+                            nextKey = cursor.getNextMediaPageKey(),
                         )
                     }
                         ?: throw IllegalStateException(
@@ -544,6 +577,9 @@ open class MediaProviderClient {
         }
     }
 
+    /**
+     * Fetches a list of search suggestions from MediaProvider filtered by the input prefix string.
+     */
     suspend fun fetchSearchSuggestions(
         resolver: ContentResolver,
         prefix: String,
@@ -569,6 +605,59 @@ open class MediaProviderClient {
                 ?.getListOfSearchSuggestions() ?: ArrayList()
         } catch (e: RuntimeException) {
             throw RuntimeException("Could not fetch search suggestions", e)
+        }
+    }
+
+    /**
+     * Fetches a list of categories and albums from MediaProvider filtered by the input list of
+     * available providers, mime types and parent category id.
+     */
+    suspend fun fetchCategoriesAndAlbums(
+        pageKey: GroupPageKey,
+        pageSize: Int,
+        contentResolver: ContentResolver,
+        availableProviders: List<Provider>,
+        parentCategoryId: String?,
+        config: PhotopickerConfiguration,
+        cancellationSignal: CancellationSignal?,
+    ): LoadResult<GroupPageKey, Group> {
+        val input: Bundle =
+            bundleOf(
+                MediaQuery.PICKER_ID.key to pageKey.pickerId,
+                MediaQuery.PAGE_SIZE.key to pageSize,
+                MediaQuery.PROVIDERS.key to
+                    ArrayList<String>().apply {
+                        availableProviders.forEach { provider -> add(provider.authority) }
+                    },
+                EXTRA_MIME_TYPES to config.mimeTypes,
+                EXTRA_INTENT_ACTION to config.action,
+                CategoryAndAlbumQuery.PARENT_CATEGORY_ID.key to parentCategoryId,
+            )
+        try {
+            return contentResolver
+                .query(
+                    getCategoryUri(parentCategoryId),
+                    /* projection */ null,
+                    input,
+                    cancellationSignal,
+                )
+                .use { cursor ->
+                    cursor?.let {
+                        LoadResult.Page(
+                            data = cursor.getListOfCategoriesAndAlbums(availableProviders),
+                            prevKey = cursor.getPrevGroupPageKey(),
+                            nextKey = cursor.getNextGroupPageKey(),
+                        )
+                    }
+                        ?: throw IllegalStateException(
+                            "Received a null response from Content Provider"
+                        )
+                }
+        } catch (e: RuntimeException) {
+            throw RuntimeException(
+                "Could not fetch categories and albums for parent category $parentCategoryId",
+                e,
+            )
         }
     }
 
@@ -874,10 +963,10 @@ open class MediaProviderClient {
     }
 
     /**
-     * Extracts the previous page key from the given [Cursor]. In case the cursor contains the
+     * Extracts the previous media page key from the given [Cursor]. In case the cursor contains the
      * contents of the first page, the previous page key will be null.
      */
-    private fun Cursor.getPrevPageKey(): MediaPageKey? {
+    private fun Cursor.getPrevMediaPageKey(): MediaPageKey? {
         val id: Long = extras.getLong(MediaResponseExtras.PREV_PAGE_ID.key, Long.MIN_VALUE)
         val date: Long =
             extras.getLong(MediaResponseExtras.PREV_PAGE_DATE_TAKEN.key, Long.MIN_VALUE)
@@ -889,10 +978,10 @@ open class MediaProviderClient {
     }
 
     /**
-     * Extracts the next page key from the given [Cursor]. In case the cursor contains the contents
-     * of the last page, the next page key will be null.
+     * Extracts the next media page key from the given [Cursor]. In case the cursor contains the
+     * contents of the last page, the next page key will be null.
      */
-    private fun Cursor.getNextPageKey(): MediaPageKey? {
+    private fun Cursor.getNextMediaPageKey(): MediaPageKey? {
         val id: Long = extras.getLong(MediaResponseExtras.NEXT_PAGE_ID.key, Long.MIN_VALUE)
         val date: Long =
             extras.getLong(MediaResponseExtras.NEXT_PAGE_DATE_TAKEN.key, Long.MIN_VALUE)
@@ -900,6 +989,32 @@ open class MediaProviderClient {
             null
         } else {
             MediaPageKey(pickerId = id, dateTakenMillis = date)
+        }
+    }
+
+    /**
+     * Extracts the previous group page key from the given [Cursor]. In case the cursor contains the
+     * contents of the first page, the previous page key will be null.
+     */
+    private fun Cursor.getPrevGroupPageKey(): GroupPageKey? {
+        val id: Long = extras.getLong(MediaResponseExtras.PREV_PAGE_ID.key, Long.MIN_VALUE)
+        return if (id == Long.MIN_VALUE) {
+            null
+        } else {
+            GroupPageKey(pickerId = id)
+        }
+    }
+
+    /**
+     * Extracts the next group page key from the given [Cursor]. In case the cursor contains the
+     * contents of the last page, the next page key will be null.
+     */
+    private fun Cursor.getNextGroupPageKey(): GroupPageKey? {
+        val id: Long = extras.getLong(MediaResponseExtras.NEXT_PAGE_ID.key, Long.MAX_VALUE)
+        return if (id == Long.MAX_VALUE) {
+            null
+        } else {
+            GroupPageKey(pickerId = id)
         }
     }
 
@@ -921,6 +1036,8 @@ open class MediaProviderClient {
         if (this.moveToFirst()) {
             do {
                 val albumId = getString(getColumnIndexOrThrow(AlbumResponse.ALBUM_ID.key))
+                val coverUriString =
+                    getString(getColumnIndexOrThrow(AlbumResponse.UNWRAPPED_COVER_URI.key))
                 result.add(
                     Group.Album(
                         id = albumId,
@@ -931,12 +1048,7 @@ open class MediaProviderClient {
                             getLong(getColumnIndexOrThrow(AlbumResponse.DATE_TAKEN.key)),
                         displayName =
                             getString(getColumnIndexOrThrow(AlbumResponse.ALBUM_NAME.key)),
-                        coverUri =
-                            Uri.parse(
-                                getString(
-                                    getColumnIndexOrThrow(AlbumResponse.UNWRAPPED_COVER_URI.key)
-                                )
-                            ),
+                        coverUri = coverUriString?.let { Uri.parse(it) } ?: Uri.parse(""),
                         coverMediaSource =
                             MediaSource.valueOf(
                                 getString(
@@ -996,6 +1108,148 @@ open class MediaProviderClient {
         }
 
         return result
+    }
+
+    /** Creates a list of [Group.Category]-s and [Group.Album]-s from the given [Cursor]. */
+    private fun Cursor.getListOfCategoriesAndAlbums(
+        availableProviders: List<Provider>
+    ): List<Group> {
+        val result: MutableList<Group> = mutableListOf<Group>()
+        val authorityToSourceMap: Map<String, MediaSource> =
+            availableProviders.associate { provider -> provider.authority to provider.mediaSource }
+
+        if (this.moveToFirst()) {
+            do {
+                try {
+                    val groupType = getString(getColumnIndexOrThrow(GroupResponse.MEDIA_GROUP.key))
+                    when (groupType) {
+                        GroupType.CATEGORY.name -> {
+                            val icons: List<Icon> =
+                                listOf<Icon?>(
+                                        this.getIcon(
+                                            authorityToSourceMap,
+                                            GroupResponse.UNWRAPPED_COVER_URI.key,
+                                        ),
+                                        this.getIcon(
+                                            authorityToSourceMap,
+                                            GroupResponse.ADDITIONAL_UNWRAPPED_COVER_URI_1.key,
+                                        ),
+                                        this.getIcon(
+                                            authorityToSourceMap,
+                                            GroupResponse.ADDITIONAL_UNWRAPPED_COVER_URI_2.key,
+                                        ),
+                                        this.getIcon(
+                                            authorityToSourceMap,
+                                            GroupResponse.ADDITIONAL_UNWRAPPED_COVER_URI_3.key,
+                                        ),
+                                    )
+                                    .filterNotNull()
+
+                            result.add(
+                                Group.Category(
+                                    id =
+                                        getString(
+                                            getColumnIndexOrThrow(GroupResponse.GROUP_ID.key)
+                                        ),
+                                    pickerId =
+                                        getLong(getColumnIndexOrThrow(GroupResponse.PICKER_ID.key)),
+                                    authority =
+                                        getString(
+                                            getColumnIndexOrThrow(GroupResponse.AUTHORITY.key)
+                                        ),
+                                    displayName =
+                                        getString(
+                                            getColumnIndexOrThrow(GroupResponse.DISPLAY_NAME.key)
+                                        ),
+                                    categoryType =
+                                        KeyToCategoryType[
+                                            getString(
+                                                getColumnIndexOrThrow(
+                                                    GroupResponse.CATEGORY_TYPE.key
+                                                )
+                                            )]
+                                            ?: throw IllegalArgumentException(
+                                                "Could not recognize category type"
+                                            ),
+                                    icons = icons,
+                                    isLeafCategory =
+                                        getInt(
+                                            getColumnIndexOrThrow(
+                                                GroupResponse.IS_LEAF_CATEGORY.key
+                                            )
+                                        ) == 1,
+                                )
+                            )
+                        }
+
+                        GroupType.ALBUM.name -> {
+                            val coverUriString =
+                                getString(
+                                    getColumnIndexOrThrow(GroupResponse.UNWRAPPED_COVER_URI.key)
+                                )
+                            val coverUri = coverUriString?.let { Uri.parse(it) } ?: Uri.parse("")
+
+                            result.add(
+                                Group.Album(
+                                    id =
+                                        getString(
+                                            getColumnIndexOrThrow(GroupResponse.GROUP_ID.key)
+                                        ),
+                                    pickerId =
+                                        getLong(getColumnIndexOrThrow(GroupResponse.PICKER_ID.key)),
+                                    authority =
+                                        getString(
+                                            getColumnIndexOrThrow(GroupResponse.AUTHORITY.key)
+                                        ),
+                                    dateTakenMillisLong =
+                                        Long.MAX_VALUE, // This is not used and will soon be
+                                    // obsolete
+                                    displayName =
+                                        getString(
+                                            getColumnIndexOrThrow(GroupResponse.DISPLAY_NAME.key)
+                                        ),
+                                    coverUri = coverUri,
+                                    coverMediaSource =
+                                        coverUri?.let {
+                                            authorityToSourceMap[coverUri.getAuthority()]
+                                        } ?: MediaSource.LOCAL,
+                                )
+                            )
+                        }
+
+                        else -> {
+                            Log.w(TAG, "Invalid group type: $groupType")
+                        }
+                    }
+                } catch (e: RuntimeException) {
+                    Log.w(TAG, "Could not extract category or album from cursor, skipping it", e)
+                }
+            } while (moveToNext())
+        }
+
+        return result
+    }
+
+    /** Creates an [Icon] object from the current [Cursor] row. If an error occurs, returns null. */
+    private fun Cursor.getIcon(
+        authorityToSourceMap: Map<String, MediaSource>,
+        columnName: String,
+    ): Icon? {
+        var unwrappedUriString: String? = null
+
+        try {
+            unwrappedUriString = getString(getColumnIndexOrThrow(columnName))
+        } catch (e: RuntimeException) {
+            Log.e(TAG, "Could not get unwrapped uri $unwrappedUriString from cursor", e)
+        }
+
+        return unwrappedUriString?.let {
+            val unwrappedUri: Uri = Uri.parse(unwrappedUriString)
+            val authority: String? = unwrappedUri.getAuthority()
+            val mediaSource: MediaSource = authorityToSourceMap[authority] ?: MediaSource.LOCAL
+            val icon = Icon(unwrappedUri, mediaSource)
+            icon
+        }
     }
 
     /** Convert the input search suggestion type string to enum */

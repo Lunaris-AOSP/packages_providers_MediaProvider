@@ -23,6 +23,7 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.provider.MediaStore;
 
 import androidx.annotation.IntDef;
@@ -47,6 +48,7 @@ public class PickerUriResolverV2 {
     private static final String PREVIEW_PATH_SEGMENT = "preview";
     private static final String PRE_SELECTION_PATH_SEGMENT = "pre_selection";
     private static final String SEARCH_SUGGESTIONS_PATH_SEGMENT = "search_suggestions";
+    private static final String CATEGORIES_PATH_SEGMENT = "categories";
 
 
     static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -60,6 +62,7 @@ public class PickerUriResolverV2 {
     static final int PICKER_INTERNAL_PRE_SELECTION = 8;
     static final int PICKER_INTERNAL_SEARCH_MEDIA = 9;
     static final int PICKER_INTERNAL_SEARCH_SUGGESTIONS = 10;
+    static final int PICKER_INTERNAL_CATEGORIES = 11;
 
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({
@@ -113,6 +116,9 @@ public class PickerUriResolverV2 {
         sUriMatcher.addURI(MediaStore.AUTHORITY,
                 BASE_PICKER_PATH + SEARCH_SUGGESTIONS_PATH_SEGMENT,
                 PICKER_INTERNAL_SEARCH_SUGGESTIONS);
+        sUriMatcher.addURI(MediaStore.AUTHORITY,
+                BASE_PICKER_PATH + CATEGORIES_PATH_SEGMENT,
+                PICKER_INTERNAL_CATEGORIES);
     }
 
     /**
@@ -123,7 +129,8 @@ public class PickerUriResolverV2 {
     public static Cursor query(
             @NonNull Context appContext,
             @NonNull Uri uri,
-            @Nullable Bundle queryArgs) {
+            @Nullable Bundle queryArgs,
+            @Nullable CancellationSignal cancellationSignal) {
         @PickerQuery
         final int query = sUriMatcher.match(uri);
 
@@ -160,8 +167,12 @@ public class PickerUriResolverV2 {
                 return PickerDataLayerV2.querySearchSuggestions(
                         appContext,
                         requireNonNull(queryArgs),
-                        null
-                );
+                        cancellationSignal);
+            case PICKER_INTERNAL_CATEGORIES:
+                return PickerDataLayerV2.queryCategoriesAndAlbums(
+                        appContext,
+                        requireNonNull(queryArgs),
+                        cancellationSignal);
             default:
                 throw new UnsupportedOperationException("Could not recognize content URI " + uri);
         }
