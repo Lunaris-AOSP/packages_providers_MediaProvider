@@ -113,10 +113,8 @@ package android.graphics.pdf.component {
   }
 
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public abstract class PdfPageObject {
-    method @NonNull public android.graphics.RectF getBounds();
     method @NonNull public float[] getMatrix();
     method public int getPdfObjectType();
-    method public void setBounds(@NonNull android.graphics.RectF);
     method public void setMatrix(@NonNull android.graphics.Matrix);
     method public void transform(float, float, float, float, float, float);
   }
@@ -132,12 +130,10 @@ package android.graphics.pdf.component {
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public final class PdfPagePathObject extends android.graphics.pdf.component.PdfPageObject {
     ctor public PdfPagePathObject();
     method @Nullable public android.graphics.Color getFillColor();
-    method @Nullable public android.graphics.PathEffect getLineStyle();
     method @NonNull public android.graphics.Path getPath();
     method @NonNull public android.graphics.Color getStrokeColor();
     method public float getStrokeWidth();
     method public void setFillColor(@Nullable android.graphics.Color);
-    method public void setLineStyle(int);
     method public void setPath(@NonNull android.graphics.Path);
     method public void setStrokeColor(@NonNull android.graphics.Color);
     method public void setStrokeWidth(float);
