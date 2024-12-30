@@ -117,6 +117,8 @@ import com.android.providers.media.photopicker.data.PickerDbFacade;
 import com.android.providers.media.photopicker.data.model.UserId;
 import com.android.providers.media.photopicker.sync.PickerSyncLockManager;
 import com.android.providers.media.photopicker.v2.model.MediaGroup;
+import com.android.providers.media.photopicker.v2.model.MediaInMediaSetSyncRequestParams;
+import com.android.providers.media.photopicker.v2.model.MediaSetsSyncRequestParams;
 import com.android.providers.media.photopicker.v2.model.MediaSource;
 import com.android.providers.media.photopicker.v2.model.SearchSuggestion;
 import com.android.providers.media.photopicker.v2.model.SearchTextRequest;
@@ -838,9 +840,13 @@ public class PickerDataLayerV2Test {
                 SearchProvider.AUTHORITY, mimeTypes);
 
         Bundle extras = new Bundle();
-        extras.putString("authority", SearchProvider.AUTHORITY);
-        extras.putStringArray("mime_types", new String[] { "image/*" });
-        extras.putString("category_id", categoryId);
+        extras.putString(
+                MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_AUTHORITY,
+                SearchProvider.AUTHORITY);
+        extras.putStringArray(
+                MediaSetsSyncRequestParams.KEY_MIME_TYPES,
+                new String[] { "image/*" });
+        extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_ID, categoryId);
         extras.putStringArrayList("providers", new ArrayList<>(List.of(SearchProvider.AUTHORITY)));
 
         try (Cursor mediaSets = PickerDataLayerV2.queryMediaSets(extras)) {
@@ -1030,7 +1036,7 @@ public class PickerDataLayerV2Test {
         final Cursor cursor3 = getCloudMediaCursor(CLOUD_ID_2, LOCAL_ID_2, 0);
         assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1);
 
-        String mediaSetPickerId = "mediaSetPickerId";
+        Long mediaSetPickerId = 1L;
 
         int cloudRowsInserted = MediaInMediaSetsDatabaseUtil.cacheMediaOfMediaSet(
                 mFacade.getDatabase(), List.of(
@@ -1057,8 +1063,12 @@ public class PickerDataLayerV2Test {
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
-        extras.putString("media_set_picker_id", mediaSetPickerId);
-        extras.putString("authority", LOCAL_PROVIDER);
+        extras.putLong(
+                MediaInMediaSetSyncRequestParams.KEY_PARENT_MEDIA_SET_PICKER_ID,
+                mediaSetPickerId);
+        extras.putString(
+                MediaInMediaSetSyncRequestParams.KEY_PARENT_MEDIA_SET_AUTHORITY,
+                LOCAL_PROVIDER);
 
         try (Cursor cursor =
                      PickerDataLayerV2.queryMediaInMediaSet(extras)) {
@@ -2691,9 +2701,13 @@ public class PickerDataLayerV2Test {
         doReturn(mMockFuture).when(mMockOperation).getResult();
 
         Bundle extras = new Bundle();
-        extras.putString("authority", SearchProvider.AUTHORITY);
-        extras.putStringArray("mime_types", new String[] { "image/*" });
-        extras.putString("category_id", "id");
+        extras.putString(
+                MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_AUTHORITY,
+                SearchProvider.AUTHORITY);
+        extras.putStringArray(
+                MediaSetsSyncRequestParams.KEY_MIME_TYPES,
+                new String[] { "image/*" });
+        extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_ID, "id");
         extras.putStringArrayList("providers", new ArrayList<>(List.of(SearchProvider.AUTHORITY)));
 
         PickerDataLayerV2.triggerMediaSetsSync(extras, mContext, mMockWorkManager);
@@ -2714,8 +2728,10 @@ public class PickerDataLayerV2Test {
         doReturn(mMockFuture).when(mMockOperation).getResult();
 
         Bundle extras = new Bundle();
-        extras.putString("authority", SearchProvider.AUTHORITY);
-        extras.putString("media_set_picker_id", "id");
+        extras.putString(
+                MediaInMediaSetSyncRequestParams.KEY_PARENT_MEDIA_SET_AUTHORITY,
+                SearchProvider.AUTHORITY);
+        extras.putLong(MediaInMediaSetSyncRequestParams.KEY_PARENT_MEDIA_SET_PICKER_ID, 1);
         extras.putStringArrayList("providers", new ArrayList<>(List.of(SearchProvider.AUTHORITY)));
 
         PickerDataLayerV2.triggerMediaSyncForMediaSet(extras, mContext, mMockWorkManager);
@@ -2974,7 +2990,7 @@ public class PickerDataLayerV2Test {
     }
 
     private ContentValues getContentValues(
-            String localId, String cloudId, String mediaSetPickerId) {
+            String localId, String cloudId, Long mediaSetPickerId) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(
                 PickerSQLConstants.MediaInMediaSetsTableColumns.CLOUD_ID.getColumnName(), cloudId);
