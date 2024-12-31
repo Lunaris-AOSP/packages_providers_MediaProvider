@@ -31,6 +31,7 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.categorygrid.paging.CategoryAndAlbumPagingSource
+import com.android.photopicker.features.categorygrid.paging.MediaSetContentsPagingSource
 import com.android.photopicker.features.categorygrid.paging.MediaSetsPagingSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -75,6 +76,9 @@ class CategoryDataServiceImpl(
     private val mediaSetPagingSources:
         MutableMap<Group.Category, PagingSource<GroupPageKey, Group.MediaSet>> =
         mutableMapOf()
+    private val mediaSetContentPagingSources:
+        MutableMap<Group.MediaSet, PagingSource<MediaPageKey, Media>> =
+        mutableMapOf()
 
     init {
         // Listen to available provider changes and clear category cache when required.
@@ -97,6 +101,11 @@ class CategoryDataServiceImpl(
                         pagingSource.invalidate()
                     }
                     mediaSetPagingSources.clear()
+
+                    mediaSetContentPagingSources.values.forEach { pagingSource ->
+                        pagingSource.invalidate()
+                    }
+                    mediaSetContentPagingSources.clear()
                 }
             }
         }
@@ -228,8 +237,51 @@ class CategoryDataServiceImpl(
     override fun getMediaSetContents(
         mediaSet: Group.MediaSet,
         cancellationSignal: CancellationSignal?,
-    ): PagingSource<MediaPageKey, Media> {
-        TODO("Not yet implemented")
+    ): PagingSource<MediaPageKey, Media> = runBlocking {
+        return@runBlocking cachedPagingSourceMutex.withLock {
+            if (
+                mediaSetContentPagingSources.containsKey(mediaSet) &&
+                    !mediaSetContentPagingSources[mediaSet]!!.invalid
+            ) {
+                Log.d(
+                    CategoryDataService.TAG,
+                    "A valid paging source is available for media set content ${mediaSet.id}. " +
+                        "Not creating a new paging source.",
+                )
+                val pagingSource = mediaSetContentPagingSources[mediaSet]!!
+                // Register the new cancellation signal to be cancelled in the callback.
+                pagingSource.registerInvalidatedCallback { cancellationSignal?.cancel() }
+                pagingSource
+            } else {
+                refreshMediaSetContents(mediaSet)
+
+                val availableProviders: List<Provider> = dataService.availableProviders.value
+                val contentResolver: ContentResolver = dataService.activeContentResolver.value
+                val pagingSource =
+                    MediaSetContentsPagingSource(
+                        contentResolver = contentResolver,
+                        availableProviders = availableProviders,
+                        parentMediaSet = mediaSet,
+                        mediaProviderClient = mediaProviderClient,
+                        dispatcher = dispatcher,
+                        configuration = config.value,
+                        events = events,
+                        cancellationSignal = cancellationSignal,
+                    )
+                // Ensure that cancellation get propagated to the data source when the paging source
+                // is invalidated.
+                pagingSource.registerInvalidatedCallback { cancellationSignal?.cancel() }
+
+                Log.v(
+                    CategoryDataService.TAG,
+                    "Created a media source paging source that queries $availableProviders for " +
+                        "parent media set id ${mediaSet.id}",
+                )
+
+                mediaSetContentPagingSources[mediaSet] = pagingSource
+                pagingSource
+            }
+        }
     }
 
     private suspend fun refreshMediaSets(category: Group.Category) {
@@ -252,6 +304,30 @@ class CategoryDataServiceImpl(
                 "Available providers $providers " +
                     "does not contain category authority ${category.authority}. " +
                     "Skip sending refresh media sets request.",
+            )
+        }
+    }
+
+    private suspend fun refreshMediaSetContents(mediaSet: Group.MediaSet) {
+        val providers = dataService.availableProviders.value
+        val contentResolver = dataService.activeContentResolver.value
+        val isMediaSetProviderAvailable =
+            providers.any { provider -> provider.authority == mediaSet.authority }
+
+        if (isMediaSetProviderAvailable) {
+            Log.d(
+                CategoryDataService.TAG,
+                "Sending media set contents refresh request to the data source" +
+                    " for parent media set ${mediaSet.id}",
+            )
+
+            mediaProviderClient.refreshMediaSetContents(contentResolver, mediaSet, config.value)
+        } else {
+            Log.e(
+                CategoryDataService.TAG,
+                "Available providers $providers " +
+                    "does not contain media set authority ${mediaSet.authority}. " +
+                    "Skip sending refresh media set contents request.",
             )
         }
     }

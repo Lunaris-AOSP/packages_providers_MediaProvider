@@ -34,6 +34,7 @@ const val SEARCH_MEDIA_PATH_SEGMENT = "search_media"
 const val SEARCH_SUGGESTIONS_PATH_SEGMENT = "search_suggestions"
 const val CATEGORIES_PATH_SEGMENT = "categories"
 const val MEDIA_SETS_PATH_SEGMENT = "media_sets"
+const val MEDIA_SET_CONTENTS_PATH_SEGMENT = "media_set_contents"
 
 const val PICKER_SEGMENT = "picker"
 const val PICKER_TRANSCODED_SEGMENT = "picker_transcoded"
@@ -142,3 +143,6 @@ fun getCategoryUri(parentCategoryId: String?): Uri {
 }
 
 val MEDIA_SETS_URI = pickerUri.buildUpon().appendPath(MEDIA_SETS_PATH_SEGMENT).build()
+
+val MEDIA_SET_CONTENTS_URI =
+    pickerUri.buildUpon().appendPath(MEDIA_SET_CONTENTS_PATH_SEGMENT).build()
