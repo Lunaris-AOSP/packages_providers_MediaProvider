@@ -83,7 +83,7 @@ class SearchDataServiceImpl(
 ) : SearchDataService {
     companion object {
         // Timeout for receiving suggestions from the data source in milli seconds.
-        private const val SUGGESTIONS_TIMEOUT: Long = 500
+        private const val SUGGESTIONS_TIMEOUT: Long = 1500
     }
 
     // An internal lock to allow thread-safe updates to the search request and results cache.

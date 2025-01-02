@@ -118,7 +118,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * This class handles Photo Picker content queries.\
+ * This class handles Photo Picker content queries.
  */
 public class PickerDataLayerV2 {
     private static final String TAG = "PickerDataLayerV2";
@@ -678,7 +678,7 @@ public class PickerDataLayerV2 {
 
         try {
             cloudSearchSuggestions = cloudSuggestionsFuture.get(
-                    /* timeout */ 300, TimeUnit.MILLISECONDS);
+                    /* timeout */ 1500, TimeUnit.MILLISECONDS);
             cloudSuggestionsFuture.thenApplyAsync(
                     (suggestions) -> maybeCacheSearchSuggestions(query, suggestions),
                     executor);

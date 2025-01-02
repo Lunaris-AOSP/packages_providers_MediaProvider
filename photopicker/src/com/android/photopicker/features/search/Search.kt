@@ -118,7 +118,7 @@ private val MEASUREMENT_SEARCH_BAR_HEIGHT = 56.dp
 private val MEASUREMENT_SEARCH_BAR_PADDING =
     PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)
 
-private val FETCH_SUGGESTION_DEBOUNCE_DELAY = 300L // in milliseconds
+private val FETCH_SUGGESTION_DEBOUNCE_DELAY = 50L // in milliseconds
 
 private val SUGGESTION_TITLE_PADDING =
     PaddingValues(start = 32.dp, end = 32.dp, top = 12.dp, bottom = 12.dp)
