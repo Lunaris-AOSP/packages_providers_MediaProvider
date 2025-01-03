@@ -80,6 +80,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -644,7 +645,8 @@ public class PickerSyncManagerTest {
         Bundle extras = new Bundle();
         extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_AUTHORITY,
                 SearchProvider.AUTHORITY);
-        extras.putStringArray(MediaSetsSyncRequestParams.KEY_MIME_TYPES, mimeTypes);
+        extras.putStringArrayList(MediaSetsSyncRequestParams.KEY_MIME_TYPES,
+                new ArrayList<String>(Arrays.asList(mimeTypes)));
         extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_ID, categoryId);
         extras.putStringArrayList("providers", new ArrayList<>(List.of(
                 PickerSyncController.LOCAL_PICKER_PROVIDER_AUTHORITY)));
@@ -689,7 +691,8 @@ public class PickerSyncManagerTest {
         Bundle extras = new Bundle();
         extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_AUTHORITY,
                 SearchProvider.AUTHORITY);
-        extras.putStringArray(MediaSetsSyncRequestParams.KEY_MIME_TYPES, mimeTypes);
+        extras.putStringArrayList(MediaSetsSyncRequestParams.KEY_MIME_TYPES,
+                new ArrayList<String>(Arrays.asList(mimeTypes)));
         extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_ID, categoryId);
         extras.putStringArrayList("providers", new ArrayList<>(List.of(
                 SearchProvider.AUTHORITY)));
