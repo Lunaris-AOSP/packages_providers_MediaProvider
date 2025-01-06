@@ -2776,6 +2776,11 @@ public class PickerDataLayerV2Test {
                     .that(cursor.getString(cursor.getColumnIndexOrThrow(
                             PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName())))
                     .isEqualTo(CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORITES);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(0L);
 
             cursor.moveToNext();
             assertWithMessage("Unexpected media group")
@@ -2784,20 +2789,29 @@ public class PickerDataLayerV2Test {
                                     PickerSQLConstants.MediaGroupResponseColumns
                                             .MEDIA_GROUP.getColumnName()))))
                     .isEqualTo(MediaGroup.ALBUM);
-
             assertWithMessage("Unexpected album id")
                     .that(cursor.getString(cursor.getColumnIndexOrThrow(
                             PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName())))
                     .isEqualTo(CloudMediaProviderContract.AlbumColumns.ALBUM_ID_CAMERA);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(1L);
 
             cursor.moveToNext();
-            // Assert that the next media groupd is people and pets category
+            // Assert that the next media group is people and pets category
             assertWithMessage("Unexpected media group")
                     .that(MediaGroup.valueOf(
                             cursor.getString(cursor.getColumnIndexOrThrow(
                                     PickerSQLConstants.MediaGroupResponseColumns
                                             .MEDIA_GROUP.getColumnName()))))
                     .isEqualTo(MediaGroup.CATEGORY);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(2L);
 
             cursor.moveToNext();
             assertWithMessage("Unexpected media group")
@@ -2806,21 +2820,24 @@ public class PickerDataLayerV2Test {
                                     PickerSQLConstants.MediaGroupResponseColumns
                                             .MEDIA_GROUP.getColumnName()))))
                     .isEqualTo(MediaGroup.ALBUM);
-
             assertWithMessage("Unexpected album id")
                     .that(cursor.getString(cursor.getColumnIndexOrThrow(
                             PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName())))
                     .isEqualTo(CloudMediaProviderContract.AlbumColumns.ALBUM_ID_VIDEOS);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(3L);
 
             cursor.moveToNext();
-            // Assert that the next media groupd is a cloud album
+            // Assert that the next media group is a cloud album
             assertWithMessage("Unexpected media group")
                     .that(MediaGroup.valueOf(
                             cursor.getString(cursor.getColumnIndexOrThrow(
                                     PickerSQLConstants.MediaGroupResponseColumns
                                             .MEDIA_GROUP.getColumnName()))))
                     .isEqualTo(MediaGroup.ALBUM);
-
             final Uri coverUri = Uri.parse(
                     cursor.getString(cursor.getColumnIndexOrThrow(
                             PickerSQLConstants.MediaGroupResponseColumns
@@ -2828,6 +2845,11 @@ public class PickerDataLayerV2Test {
             assertWithMessage("Unexpected media group")
                     .that(coverUri.getLastPathSegment())
                     .isEqualTo(LOCAL_ID_1);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(4L);
         }
     }
 
