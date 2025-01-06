@@ -852,12 +852,7 @@ public final class PdfRenderer implements AutoCloseable {
             throwIfDocumentOrPageClosed();
             Preconditions.checkArgument(annotationId >= 0,
                     "Annotation id should be non-negative");
-            PdfAnnotation removedAnnotation = mPdfProcessor.removePageAnnotation(mIndex,
-                    annotationId);
-            if (removedAnnotation == null) {
-                throw new IllegalStateException(
-                        "Failed to remove annotation with id " + annotationId);
-            }
+            mPdfProcessor.removePageAnnotation(mIndex, annotationId);
         }
 
         /**
@@ -981,10 +976,7 @@ public final class PdfRenderer implements AutoCloseable {
             throwIfDocumentOrPageClosed();
             Preconditions.checkArgument(objectId >= 0,
                     "Page object id should be greater than equal to 0");
-            PdfPageObject pageObject = mPdfProcessor.removePageObject(mIndex, objectId);
-            if (pageObject == null) {
-                throw new IllegalStateException("Page object cannot be removed.");
-            }
+            mPdfProcessor.removePageObject(mIndex, objectId);
         }
 
         /**
