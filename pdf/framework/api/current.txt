@@ -46,8 +46,8 @@ package android.graphics.pdf {
     method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") @NonNull public java.util.List<android.util.Pair<java.lang.Integer,android.graphics.pdf.component.PdfPageObject>> getPageObjects();
     method @NonNull public java.util.List<android.graphics.pdf.content.PdfPageTextContent> getTextContents();
     method @IntRange(from=0) public int getWidth();
-    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") @NonNull public android.graphics.pdf.component.PdfAnnotation removePageAnnotation(@IntRange(from=0) int);
-    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") @NonNull public android.graphics.pdf.component.PdfPageObject removePageObject(@IntRange(from=0) int);
+    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") public void removePageAnnotation(@IntRange(from=0) int);
+    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public void removePageObject(@IntRange(from=0) int);
     method public void render(@NonNull android.graphics.Bitmap, @Nullable android.graphics.Rect, @Nullable android.graphics.Matrix, @NonNull android.graphics.pdf.RenderParams);
     method @NonNull public java.util.List<android.graphics.pdf.models.PageMatchBounds> searchText(@NonNull String);
     method @Nullable public android.graphics.pdf.models.selection.PageSelection selectContent(@NonNull android.graphics.pdf.models.selection.SelectionBoundary, @NonNull android.graphics.pdf.models.selection.SelectionBoundary);
