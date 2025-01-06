@@ -139,8 +139,8 @@ package android.graphics.pdf.component {
     method public void setStrokeWidth(float);
   }
 
-  @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public final class PdfPageTextObject extends android.graphics.pdf.component.PdfPageObject {
-    ctor @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_objects") public PdfPageTextObject(@NonNull String, @NonNull android.graphics.Typeface, float);
+  @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_objects") public final class PdfPageTextObject extends android.graphics.pdf.component.PdfPageObject {
+    ctor public PdfPageTextObject(@NonNull String, @NonNull android.graphics.Typeface, float);
     method @Nullable public android.graphics.Color getFillColor();
     method public float getFontSize();
     method @NonNull public android.graphics.Color getStrokeColor();
