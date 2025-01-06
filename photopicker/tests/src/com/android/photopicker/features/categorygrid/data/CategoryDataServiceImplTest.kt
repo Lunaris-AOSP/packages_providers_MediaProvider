@@ -38,6 +38,8 @@ import com.android.photopicker.data.TestNotificationServiceImpl
 import com.android.photopicker.data.TestPrefetchDataService
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.GroupPageKey
+import com.android.photopicker.data.model.Media
+import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.categorygrid.data.CategoryDataService
@@ -85,7 +87,6 @@ class CategoryDataServiceImplTest {
     private lateinit var mockPackageManager: PackageManager
     private lateinit var events: Events
     private lateinit var userStatusFlow: MutableStateFlow<UserStatus>
-    private lateinit var dataService: DataService
 
     @Before
     fun setup() {
@@ -122,29 +123,8 @@ class CategoryDataServiceImplTest {
 
     @Test
     fun testCategoryPagingSourceCacheReuse() = runTest {
-        dataService =
-            DataServiceImpl(
-                userStatus = userStatusFlow,
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                featureManager = testFeatureManager,
-                appContext = mockContext,
-                events = events,
-                processOwnerHandle = userProfilePrimary.handle,
-            )
-        val categoryDataService: CategoryDataService =
-            CategoryDataServiceImpl(
-                dataService = dataService,
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                events = events,
-            )
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
 
         advanceTimeBy(100)
 
@@ -165,29 +145,8 @@ class CategoryDataServiceImplTest {
 
     @Test
     fun testCategoryPagingSourceInvalidation() = runTest {
-        dataService =
-            DataServiceImpl(
-                userStatus = userStatusFlow,
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                featureManager = testFeatureManager,
-                appContext = mockContext,
-                events = events,
-                processOwnerHandle = userProfilePrimary.handle,
-            )
-        val categoryDataService: CategoryDataService =
-            CategoryDataServiceImpl(
-                dataService = dataService,
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                events = events,
-            )
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
 
         val emissions = mutableListOf<List<Provider>>()
         this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
@@ -201,27 +160,7 @@ class CategoryDataServiceImplTest {
         assertThat(firstCategoryAndAlbumPagingSource.invalid).isFalse()
         assertThat(cancellationSignal.isCanceled()).isFalse()
 
-        // The active user changes
-        val updatedContentProvider = TestMediaProvider()
-        val updatedContentResolver: ContentResolver = ContentResolver.wrap(updatedContentProvider)
-        updatedContentProvider.providers =
-            mutableListOf(
-                Provider(
-                    authority = "local_authority",
-                    mediaSource = MediaSource.LOCAL,
-                    uid = 0,
-                    displayName = "",
-                ),
-                Provider(
-                    authority = "cloud_authority",
-                    mediaSource = MediaSource.REMOTE,
-                    uid = 0,
-                    displayName = "",
-                ),
-            )
-
-        userStatusFlow.update { it.copy(activeContentResolver = updatedContentResolver) }
-
+        updateActiveContentResolver()
         advanceTimeBy(1000)
 
         // Since the active user has changed, this should trigger a re-fetch of the active
@@ -242,29 +181,8 @@ class CategoryDataServiceImplTest {
 
     @Test
     fun testMediaSetsPagingSourceCacheReuse() = runTest {
-        dataService =
-            DataServiceImpl(
-                userStatus = userStatusFlow,
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                featureManager = testFeatureManager,
-                appContext = mockContext,
-                events = events,
-                processOwnerHandle = userProfilePrimary.handle,
-            )
-        val categoryDataService: CategoryDataService =
-            CategoryDataServiceImpl(
-                dataService = dataService,
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                events = events,
-            )
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
 
         advanceTimeBy(100)
 
@@ -285,29 +203,8 @@ class CategoryDataServiceImplTest {
 
     @Test
     fun testMediaSetsPagingSourceInvalidation() = runTest {
-        dataService =
-            DataServiceImpl(
-                userStatus = userStatusFlow,
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                featureManager = testFeatureManager,
-                appContext = mockContext,
-                events = events,
-                processOwnerHandle = userProfilePrimary.handle,
-            )
-        val categoryDataService: CategoryDataService =
-            CategoryDataServiceImpl(
-                dataService = dataService,
-                config = provideTestConfigurationFlow(this.backgroundScope),
-                scope = this.backgroundScope,
-                notificationService = notificationService,
-                mediaProviderClient = mediaProviderClient,
-                dispatcher = StandardTestDispatcher(this.testScheduler),
-                events = events,
-            )
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
 
         val emissions = mutableListOf<List<Provider>>()
         this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
@@ -321,7 +218,120 @@ class CategoryDataServiceImplTest {
         assertThat(firstMediaSetsPagingSource.invalid).isFalse()
         assertThat(cancellationSignal.isCanceled()).isFalse()
 
-        // The active user changes
+        updateActiveContentResolver()
+        advanceTimeBy(1000)
+
+        // Since the active user has changed, this should trigger a re-fetch of the active
+        // providers.
+        assertThat(emissions.count()).isEqualTo(2)
+
+        // Check that the old PagingSource has been invalidated.
+        assertThat(firstMediaSetsPagingSource.invalid).isTrue()
+
+        // Check that the CancellationSignal has been marked as cancelled.
+        assertThat(cancellationSignal.isCanceled()).isTrue()
+
+        // Check that the new PagingSource instance is valid.
+        val secondMediaSetsPagingSource: PagingSource<GroupPageKey, Group.MediaSet> =
+            categoryDataService.getMediaSets(testContentProvider.parentCategory)
+        assertThat(secondMediaSetsPagingSource.invalid).isFalse()
+    }
+
+    @Test
+    fun testMediaSetContentsPagingSourceCacheReuse() = runTest {
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
+
+        advanceTimeBy(100)
+
+        val cancellationSignal = CancellationSignal()
+        val firstMediaSetContentsPagingSource: PagingSource<MediaPageKey, Media> =
+            categoryDataService.getMediaSetContents(testContentProvider.mediaSets[0])
+        assertThat(firstMediaSetContentsPagingSource.invalid).isFalse()
+
+        // Check that the older paging source was cached and is reused.
+        val secondMediaSetContentsPagingSource: PagingSource<MediaPageKey, Media> =
+            categoryDataService.getMediaSetContents(
+                testContentProvider.mediaSets[0].copy(),
+                cancellationSignal,
+            )
+        assertThat(secondMediaSetContentsPagingSource).isEqualTo(firstMediaSetContentsPagingSource)
+        assertThat(cancellationSignal.isCanceled()).isFalse()
+
+        firstMediaSetContentsPagingSource.invalidate()
+        assertThat(cancellationSignal.isCanceled()).isTrue()
+    }
+
+    @Test
+    fun testMediaSetContentsPagingSourceInvalidation() = runTest {
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
+
+        val emissions = mutableListOf<List<Provider>>()
+        this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
+        advanceTimeBy(100)
+
+        assertThat(emissions.count()).isEqualTo(1)
+
+        val cancellationSignal = CancellationSignal()
+        val firstMediaSetContentsPagingSource: PagingSource<MediaPageKey, Media> =
+            categoryDataService.getMediaSetContents(
+                testContentProvider.mediaSets[0],
+                cancellationSignal,
+            )
+        assertThat(firstMediaSetContentsPagingSource.invalid).isFalse()
+        assertThat(cancellationSignal.isCanceled()).isFalse()
+
+        updateActiveContentResolver()
+        advanceTimeBy(1000)
+
+        // Since the active user has changed, this should trigger a re-fetch of the active
+        // providers.
+        assertThat(emissions.count()).isEqualTo(2)
+
+        // Check that the old PagingSource has been invalidated.
+        assertThat(firstMediaSetContentsPagingSource.invalid).isTrue()
+
+        // Check that the CancellationSignal has been marked as cancelled.
+        assertThat(cancellationSignal.isCanceled()).isTrue()
+
+        // Check that the new PagingSource instance is valid.
+        val secondMediaSetContentsPagingSource: PagingSource<MediaPageKey, Media> =
+            categoryDataService.getMediaSetContents(testContentProvider.mediaSets[0])
+        assertThat(secondMediaSetContentsPagingSource.invalid).isFalse()
+    }
+
+    private fun getDataService(scope: TestScope): DataService {
+        return DataServiceImpl(
+            userStatus = userStatusFlow,
+            scope = scope.backgroundScope,
+            notificationService = notificationService,
+            mediaProviderClient = mediaProviderClient,
+            dispatcher = StandardTestDispatcher(scope.testScheduler),
+            config = provideTestConfigurationFlow(scope.backgroundScope),
+            featureManager = testFeatureManager,
+            appContext = mockContext,
+            events = events,
+            processOwnerHandle = userProfilePrimary.handle,
+        )
+    }
+
+    private fun getCategoryDataService(
+        scope: TestScope,
+        dataService: DataService,
+    ): CategoryDataService {
+        return CategoryDataServiceImpl(
+            dataService = dataService,
+            config = provideTestConfigurationFlow(scope.backgroundScope),
+            scope = scope.backgroundScope,
+            notificationService = notificationService,
+            mediaProviderClient = mediaProviderClient,
+            dispatcher = StandardTestDispatcher(scope.testScheduler),
+            events = events,
+        )
+    }
+
+    private fun updateActiveContentResolver() {
         val updatedContentProvider = TestMediaProvider()
         val updatedContentResolver: ContentResolver = ContentResolver.wrap(updatedContentProvider)
         updatedContentProvider.providers =
@@ -339,24 +349,6 @@ class CategoryDataServiceImplTest {
                     displayName = "",
                 ),
             )
-
         userStatusFlow.update { it.copy(activeContentResolver = updatedContentResolver) }
-
-        advanceTimeBy(1000)
-
-        // Since the active user has changed, this should trigger a re-fetch of the active
-        // providers.
-        assertThat(emissions.count()).isEqualTo(2)
-
-        // Check that the old PagingSource has been invalidated.
-        assertThat(firstMediaSetsPagingSource.invalid).isTrue()
-
-        // Check that the CancellationSignal has been marked as cancelled.
-        assertThat(cancellationSignal.isCanceled()).isTrue()
-
-        // Check that the new PagingSource instance is valid.
-        val secondMediaSetsPagingSource: PagingSource<GroupPageKey, Group.MediaSet> =
-            categoryDataService.getMediaSets(testContentProvider.parentCategory)
-        assertThat(secondMediaSetsPagingSource.invalid).isFalse()
     }
 }

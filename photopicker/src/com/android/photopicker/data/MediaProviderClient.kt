@@ -49,10 +49,9 @@ import com.android.photopicker.features.search.model.SearchSuggestionType
 open class MediaProviderClient {
     companion object {
         private const val TAG = "MediaProviderClient"
-        const val MEDIA_INIT_CALL_METHOD: String = "picker_media_init"
         private const val MEDIA_SETS_INIT_CALL_METHOD: String = "picker_media_sets_init_call"
-        const val SEARCH_REQUEST_INIT_CALL_METHOD = "picker_internal_search_media_init"
-        const val GET_SEARCH_PROVIDERS_CALL_METHOD = "picker_internal_get_search_providers"
+        private const val MEDIA_SET_CONTENTS_INIT_CALL_METHOD: String =
+            "picker_media_in_media_set_init"
         private const val EXTRA_MIME_TYPES = "mime_types"
         private const val EXTRA_INTENT_ACTION = "intent_action"
         private const val EXTRA_PROVIDERS = "providers"
@@ -61,6 +60,9 @@ open class MediaProviderClient {
         private const val EXTRA_ALBUM_AUTHORITY = "album_authority"
         private const val COLUMN_GRANTS_COUNT = "grants_count"
         private const val PRE_SELECTION_URIS = "pre_selection_uris"
+        const val MEDIA_INIT_CALL_METHOD: String = "picker_media_init"
+        const val SEARCH_REQUEST_INIT_CALL_METHOD = "picker_internal_search_media_init"
+        const val GET_SEARCH_PROVIDERS_CALL_METHOD = "picker_internal_get_search_providers"
         const val SEARCH_PROVIDER_AUTHORITIES = "search_provider_authorities"
         const val SEARCH_REQUEST_ID = "search_request_id"
     }
@@ -96,6 +98,15 @@ open class MediaProviderClient {
     private enum class MediaSetsQuery(val key: String) {
         PARENT_CATEGORY_ID("parent_category_id"),
         PARENT_CATEGORY_AUTHORITY("parent_category_authority"),
+    }
+
+    /**
+     * Contains all mandatory keys required to make a Media Set contents query that are not present
+     * in [MediaQuery] already.
+     */
+    private enum class MediaSetContentsQuery(val key: String) {
+        PARENT_MEDIA_SET_PICKER_ID("media_set_picker_id"),
+        PARENT_MEDIA_SET_AUTHORITY("media_set_picker_authority"),
     }
 
     /**
@@ -721,6 +732,55 @@ open class MediaProviderClient {
     }
 
     /**
+     * Fetches a list of media items in a media set from MediaProvider filtered by the input list of
+     * available providers, mime types and parent media set id.
+     */
+    suspend fun fetchMediaSetContents(
+        pageKey: MediaPageKey,
+        pageSize: Int,
+        contentResolver: ContentResolver,
+        availableProviders: List<Provider>,
+        parentMediaSet: Group.MediaSet,
+        config: PhotopickerConfiguration,
+        cancellationSignal: CancellationSignal?,
+    ): LoadResult<MediaPageKey, Media> {
+        val input: Bundle =
+            bundleOf(
+                MediaQuery.PICKER_ID.key to pageKey.pickerId,
+                MediaQuery.PAGE_SIZE.key to pageSize,
+                MediaQuery.PROVIDERS.key to
+                    ArrayList<String>().apply {
+                        availableProviders.forEach { provider -> add(provider.authority) }
+                    },
+                EXTRA_MIME_TYPES to config.mimeTypes,
+                EXTRA_INTENT_ACTION to config.action,
+                MediaSetContentsQuery.PARENT_MEDIA_SET_PICKER_ID.key to parentMediaSet.pickerId,
+                MediaSetContentsQuery.PARENT_MEDIA_SET_AUTHORITY.key to parentMediaSet.authority,
+            )
+        try {
+            return contentResolver
+                .query(MEDIA_SET_CONTENTS_URI, /* projection */ null, input, cancellationSignal)
+                .use { cursor ->
+                    cursor?.let {
+                        LoadResult.Page(
+                            data = cursor.getListOfMedia(),
+                            prevKey = cursor.getPrevMediaPageKey(),
+                            nextKey = cursor.getNextMediaPageKey(),
+                        )
+                    }
+                        ?: throw IllegalStateException(
+                            "Received a null response from Content Provider"
+                        )
+                }
+        } catch (e: RuntimeException) {
+            throw RuntimeException(
+                "Could not fetch media set contents for parent media set ${parentMediaSet.id}",
+                e,
+            )
+        }
+    }
+
+    /**
      * Send a refresh media request to MediaProvider. This is a signal for MediaProvider to refresh
      * its cache, if required.
      */
@@ -791,6 +851,39 @@ open class MediaProviderClient {
             )
         } catch (e: RuntimeException) {
             Log.e(TAG, "Could not send refresh media sets call to Media Provider $extras", e)
+        }
+    }
+
+    /**
+     * Send a refresh media set contents request to MediaProvider. This is a signal for
+     * MediaProvider to refresh its cache for the given parent media set id and authority, if
+     * required.
+     */
+    suspend fun refreshMediaSetContents(
+        contentResolver: ContentResolver,
+        mediaSet: Group.MediaSet,
+        config: PhotopickerConfiguration,
+    ) {
+        val extras =
+            bundleOf(
+                EXTRA_MIME_TYPES to config.mimeTypes,
+                MediaSetContentsQuery.PARENT_MEDIA_SET_PICKER_ID.key to mediaSet.id,
+                MediaSetContentsQuery.PARENT_MEDIA_SET_AUTHORITY.key to mediaSet.authority,
+            )
+
+        try {
+            contentResolver.call(
+                MEDIA_PROVIDER_AUTHORITY,
+                MEDIA_SET_CONTENTS_INIT_CALL_METHOD,
+                /* arg */ null,
+                extras,
+            )
+        } catch (e: RuntimeException) {
+            Log.e(
+                TAG,
+                "Could not send refresh media set contents call to Media Provider $extras",
+                e,
+            )
         }
     }
 

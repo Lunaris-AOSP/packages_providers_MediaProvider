@@ -590,4 +590,34 @@ class MediaProviderClientTest {
             assertThat(mediaSets[index]).isEqualTo(expectedMediaSets[index])
         }
     }
+
+    @Test
+    fun testFetchMediaSetContents() = runTest {
+        val mediaProviderClient = MediaProviderClient()
+
+        val mediaSetContentsLoadResult: LoadResult<MediaPageKey, Media> =
+            mediaProviderClient.fetchMediaSetContents(
+                pageKey = MediaPageKey(),
+                pageSize = 5,
+                contentResolver = testContentResolver,
+                availableProviders = testContentProvider.providers,
+                parentMediaSet = testContentProvider.mediaSets[0],
+                config =
+                    PhotopickerConfiguration(
+                        action = MediaStore.ACTION_PICK_IMAGES,
+                        sessionId = sessionId,
+                    ),
+                cancellationSignal = CancellationSignal(),
+            )
+
+        assertThat(mediaSetContentsLoadResult is LoadResult.Page).isTrue()
+
+        val media: List<Media> = (mediaSetContentsLoadResult as LoadResult.Page).data
+
+        val expectedMedia = testContentProvider.media
+        assertThat(media.count()).isEqualTo(expectedMedia.count())
+        for (index in expectedMedia.indices) {
+            assertThat(media[index]).isEqualTo(expectedMedia[index])
+        }
+    }
 }
