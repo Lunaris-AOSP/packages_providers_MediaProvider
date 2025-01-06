@@ -1444,7 +1444,6 @@ public class PickerDataLayerV2 {
             @NonNull Bundle extras, @NonNull Context appContext, @NonNull WorkManager workManager) {
 
         requireNonNull(workManager);
-
         MediaSetsSyncRequestParams mediaSetsSyncRequestParams =
                 new MediaSetsSyncRequestParams(extras);
         final Set<String> providers = new HashSet<>(

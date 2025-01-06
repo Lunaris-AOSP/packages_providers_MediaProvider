@@ -199,6 +199,7 @@ class TestMediaProvider(
             PRE_SELECTION_URI_PATH_SEGMENT -> fetchFilteredMedia(queryArgs)
             SEARCH_SUGGESTIONS_PATH_SEGMENT -> getSearchSuggestions()
             CATEGORIES_PATH_SEGMENT -> getCategoriesAndAlbums()
+            MEDIA_SETS_PATH_SEGMENT -> getMediaSets()
             else -> {
                 val pathSegments: MutableList<String> = uri.getPathSegments()
                 if (pathSegments.size == 4 && pathSegments[2].equals(ALBUM_PATH_SEGMENT)) {

@@ -239,4 +239,124 @@ class CategoryDataServiceImplTest {
             categoryDataService.getCategories()
         assertThat(secondCategoryAndAlbumPagingSource.invalid).isFalse()
     }
+
+    @Test
+    fun testMediaSetsPagingSourceCacheReuse() = runTest {
+        dataService =
+            DataServiceImpl(
+                userStatus = userStatusFlow,
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                featureManager = testFeatureManager,
+                appContext = mockContext,
+                events = events,
+                processOwnerHandle = userProfilePrimary.handle,
+            )
+        val categoryDataService: CategoryDataService =
+            CategoryDataServiceImpl(
+                dataService = dataService,
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                events = events,
+            )
+
+        advanceTimeBy(100)
+
+        val cancellationSignal = CancellationSignal()
+        val firstMediaSetsPagingSource: PagingSource<GroupPageKey, Group.MediaSet> =
+            categoryDataService.getMediaSets(testContentProvider.parentCategory)
+        assertThat(firstMediaSetsPagingSource.invalid).isFalse()
+
+        // Check that the older paging source was cached and is reused.
+        val secondMediaSetsPagingSource: PagingSource<GroupPageKey, Group.MediaSet> =
+            categoryDataService.getMediaSets(testContentProvider.parentCategory, cancellationSignal)
+        assertThat(secondMediaSetsPagingSource).isEqualTo(firstMediaSetsPagingSource)
+        assertThat(cancellationSignal.isCanceled()).isFalse()
+
+        firstMediaSetsPagingSource.invalidate()
+        assertThat(cancellationSignal.isCanceled()).isTrue()
+    }
+
+    @Test
+    fun testMediaSetsPagingSourceInvalidation() = runTest {
+        dataService =
+            DataServiceImpl(
+                userStatus = userStatusFlow,
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                featureManager = testFeatureManager,
+                appContext = mockContext,
+                events = events,
+                processOwnerHandle = userProfilePrimary.handle,
+            )
+        val categoryDataService: CategoryDataService =
+            CategoryDataServiceImpl(
+                dataService = dataService,
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                events = events,
+            )
+
+        val emissions = mutableListOf<List<Provider>>()
+        this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
+        advanceTimeBy(100)
+
+        assertThat(emissions.count()).isEqualTo(1)
+
+        val cancellationSignal = CancellationSignal()
+        val firstMediaSetsPagingSource: PagingSource<GroupPageKey, Group.MediaSet> =
+            categoryDataService.getMediaSets(testContentProvider.parentCategory, cancellationSignal)
+        assertThat(firstMediaSetsPagingSource.invalid).isFalse()
+        assertThat(cancellationSignal.isCanceled()).isFalse()
+
+        // The active user changes
+        val updatedContentProvider = TestMediaProvider()
+        val updatedContentResolver: ContentResolver = ContentResolver.wrap(updatedContentProvider)
+        updatedContentProvider.providers =
+            mutableListOf(
+                Provider(
+                    authority = "local_authority",
+                    mediaSource = MediaSource.LOCAL,
+                    uid = 0,
+                    displayName = "",
+                ),
+                Provider(
+                    authority = "cloud_authority",
+                    mediaSource = MediaSource.REMOTE,
+                    uid = 0,
+                    displayName = "",
+                ),
+            )
+
+        userStatusFlow.update { it.copy(activeContentResolver = updatedContentResolver) }
+
+        advanceTimeBy(1000)
+
+        // Since the active user has changed, this should trigger a re-fetch of the active
+        // providers.
+        assertThat(emissions.count()).isEqualTo(2)
+
+        // Check that the old PagingSource has been invalidated.
+        assertThat(firstMediaSetsPagingSource.invalid).isTrue()
+
+        // Check that the CancellationSignal has been marked as cancelled.
+        assertThat(cancellationSignal.isCanceled()).isTrue()
+
+        // Check that the new PagingSource instance is valid.
+        val secondMediaSetsPagingSource: PagingSource<GroupPageKey, Group.MediaSet> =
+            categoryDataService.getMediaSets(testContentProvider.parentCategory)
+        assertThat(secondMediaSetsPagingSource.invalid).isFalse()
+    }
 }
