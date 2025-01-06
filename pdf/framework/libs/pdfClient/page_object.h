@@ -107,8 +107,8 @@ class PathObject : public PageObject {
             : command(command), x(x), y(y), is_closed(is_closed) {}
     };
 
-    bool is_fill_mode = true;
-    bool is_stroke = false;
+    bool is_fill_mode;
+    bool is_stroke;
 
     std::vector<Segment> segments;
 };
