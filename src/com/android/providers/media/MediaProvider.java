@@ -3981,7 +3981,8 @@ public class MediaProvider extends ContentProvider {
                     mPickerSyncController.getCloudProvider(), mPickerDataLayer);
         }
         if (table == PICKER_INTERNAL_V2) {
-            return PickerUriResolverV2.query(getContext().getApplicationContext(), uri, queryArgs);
+            return PickerUriResolverV2.query(
+                    getContext().getApplicationContext(), uri, queryArgs, signal);
         }
 
         final DatabaseHelper helper = getDatabaseForUri(uri);
