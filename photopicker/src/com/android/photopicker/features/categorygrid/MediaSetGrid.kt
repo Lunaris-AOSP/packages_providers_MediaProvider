@@ -19,16 +19,27 @@ package com.android.photopicker.features.categorygrid
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.android.modules.utils.build.SdkLevel
+import com.android.photopicker.R
+import com.android.photopicker.core.components.EmptyState
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.components.mediaGrid
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
@@ -40,6 +51,7 @@ import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.extensions.navigateToMediaSetContentGrid
+import com.android.photopicker.extensions.transferTouchesToHostInEmbedded
 import kotlinx.coroutines.flow.StateFlow
 
 /** The number of grid cells per row for Phone / narrow layouts */
@@ -72,6 +84,7 @@ fun MediaSetGrid(
             val isEmbedded =
                 LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
             val isExpanded = LocalEmbeddedState.current?.isExpanded ?: false
+            val host = LocalEmbeddedState.current?.host
             // Use the expanded layout any time the Width is Medium or larger.
             val isExpandedScreen: Boolean =
                 when (LocalWindowSizeClass.current.widthSizeClass) {
@@ -81,35 +94,86 @@ fun MediaSetGrid(
                 }
             val mediaSetItems = items.collectAsLazyPagingItems()
             Column(modifier = Modifier.fillMaxSize()) {
-                // Invoke the composable for MediasetGrid. OnClick uses the navController to
-                // navigate to the mediaset content for the mediaset that is selected by the user.
-                mediaGrid(
-                    items = mediaSetItems,
-                    userScrollEnabled =
-                        when (isEmbedded) {
-                            true -> isExpanded
-                            false -> true
-                        },
-                    onItemClick = { item ->
-                        if (item is MediaGridItem.PersonMediaSetItem) {
-                            navController.navigateToMediaSetContentGrid(mediaSet = item.mediaSet)
-                        } else if (item is MediaGridItem.MediaSetItem) {
-                            navController.navigateToMediaSetContentGrid(mediaSet = item.mediaSet)
-                        }
-                    },
-                    isExpandedScreen = isExpandedScreen,
-                    columns =
-                        when (isExpandedScreen) {
-                            true -> GridCells.Fixed(CELLS_PER_ROW_EXPANDED_FOR_MEDIASET_GRID)
-                            false -> GridCells.Fixed(CELLS_PER_ROW_FOR_MEDIASET_GRID)
-                        },
-                    selection = emptySet(),
-                    gridCellPadding = MEASUREMENT_HORIZONTAL_CELL_SPACING_MEDIASET_GRID,
-                    contentPadding =
-                        PaddingValues(MEASUREMENT_HORIZONTAL_CELL_SPACING_MEDIASET_GRID),
-                    state = state,
-                )
+                val isEmptyAndNoMorePages =
+                    mediaSetItems.itemCount == 0 &&
+                        mediaSetItems.loadState.source.append is LoadState.NotLoading &&
+                        mediaSetItems.loadState.source.append.endOfPaginationReached
+                when {
+                    isEmptyAndNoMorePages -> {
+                        val localConfig = LocalConfiguration.current
+                        val emptyStatePadding =
+                            remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
+                        val (title, body, icon) = getEmptyStateContentForMediaset()
+                        EmptyState(
+                            modifier =
+                                if (SdkLevel.isAtLeastU() && isEmbedded && host != null) {
+                                    // In embedded no need to give extra top padding to make empty
+                                    // state title and body clearly visible in collapse mode (small
+                                    // view)
+                                    Modifier.fillMaxWidth()
+                                        .transferTouchesToHostInEmbedded(host = host)
+                                } else {
+                                    // Provide 20% of screen height as empty space above
+                                    Modifier.fillMaxWidth().padding(top = emptyStatePadding)
+                                },
+                            icon = icon,
+                            title = title,
+                            body = body,
+                        )
+                    }
+
+                    else -> {
+                        // Invoke the composable for MediasetGrid. OnClick uses the navController to
+                        // navigate to the mediaset content for the mediaset that is selected by the
+                        // user.
+                        mediaGrid(
+                            items = mediaSetItems,
+                            userScrollEnabled =
+                                when (isEmbedded) {
+                                    true -> isExpanded
+                                    false -> true
+                                },
+                            onItemClick = { item ->
+                                if (item is MediaGridItem.PersonMediaSetItem) {
+                                    navController.navigateToMediaSetContentGrid(
+                                        mediaSet = item.mediaSet
+                                    )
+                                } else if (item is MediaGridItem.MediaSetItem) {
+                                    navController.navigateToMediaSetContentGrid(
+                                        mediaSet = item.mediaSet
+                                    )
+                                }
+                            },
+                            isExpandedScreen = isExpandedScreen,
+                            columns =
+                                when (isExpandedScreen) {
+                                    true ->
+                                        GridCells.Fixed(CELLS_PER_ROW_EXPANDED_FOR_MEDIASET_GRID)
+                                    false -> GridCells.Fixed(CELLS_PER_ROW_FOR_MEDIASET_GRID)
+                                },
+                            selection = emptySet(),
+                            gridCellPadding = MEASUREMENT_HORIZONTAL_CELL_SPACING_MEDIASET_GRID,
+                            contentPadding =
+                                PaddingValues(MEASUREMENT_HORIZONTAL_CELL_SPACING_MEDIASET_GRID),
+                            state = state,
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+/**
+ * Return a generic content for the empty state.
+ *
+ * @return a [Triple] that contains the [Title, Body, Icon] for the empty state.
+ */
+@Composable
+private fun getEmptyStateContentForMediaset(): Triple<String, String, ImageVector> {
+    return Triple(
+        stringResource(R.string.photopicker_photos_empty_state_title),
+        stringResource(R.string.photopicker_photos_empty_state_body),
+        Icons.Outlined.Image,
+    )
 }

@@ -172,23 +172,51 @@ class CategoryGridFeature : PhotopickerUiFeature {
                 override val enterTransition:
                     (AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition)? =
                     {
-                        // Positive value to slide left-to-right
-                        slideInHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        if (
+                            initialState.destination.route !=
+                                PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route
+                        ) {
+                            // Positive value to slide left-to-right
+                            slideInHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        } else {
+                            slideInHorizontally(animationSpec = springDefaultEffectOffset) { -it }
+                        }
                     }
                 override val exitTransition:
                     (AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition)? =
                     {
-                        slideOutHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        if (
+                            targetState.destination.route !=
+                                PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route
+                        ) {
+                            slideOutHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        } else {
+                            slideOutHorizontally(animationSpec = springDefaultEffectOffset) { -it }
+                        }
                     }
                 override val popEnterTransition:
                     (AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition)? =
                     {
-                        slideInHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        if (
+                            initialState.destination.route !=
+                                PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route
+                        ) {
+                            slideInHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        } else {
+                            slideInHorizontally(animationSpec = springDefaultEffectOffset) { -it }
+                        }
                     }
                 override val popExitTransition:
                     (AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition)? =
                     {
-                        slideOutHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        if (
+                            targetState.destination.route !=
+                                PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route
+                        ) {
+                            slideOutHorizontally(animationSpec = springDefaultEffectOffset) { it }
+                        } else {
+                            slideOutHorizontally(animationSpec = springDefaultEffectOffset) { -it }
+                        }
                     }
 
                 @Composable
