@@ -135,7 +135,7 @@ public class PickerSyncManagerTest {
     }
 
     @Test
-    @RequiresFlagsDisabled(Flags.FLAG_CLOUD_MEDIA_PROVIDER_SEARCH)
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     public void testSchedulePeriodicSyncs() {
         setupPickerSyncManager(/* schedulePeriodicSyncs */ true);
 
@@ -172,7 +172,7 @@ public class PickerSyncManagerTest {
     }
 
     @Test
-    @RequiresFlagsEnabled(Flags.FLAG_CLOUD_MEDIA_PROVIDER_SEARCH)
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     public void testSchedulePeriodicSyncsWithSearchEnabled() {
         setupPickerSyncManager(/* schedulePeriodicSyncs */ true);
 
@@ -224,7 +224,7 @@ public class PickerSyncManagerTest {
     }
 
     @Test
-    @RequiresFlagsDisabled(Flags.FLAG_CLOUD_MEDIA_PROVIDER_SEARCH)
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     public void testPeriodicWorkIsScheduledOnDeviceConfigChanges() {
 
         mConfigStore.disableCloudMediaFeature();
@@ -285,7 +285,7 @@ public class PickerSyncManagerTest {
     }
 
     @Test
-    @RequiresFlagsEnabled(Flags.FLAG_CLOUD_MEDIA_PROVIDER_SEARCH)
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     public void testOnDeviceConfigChangesWithSearchEnabled() {
 
         mConfigStore.disableCloudMediaFeature();
