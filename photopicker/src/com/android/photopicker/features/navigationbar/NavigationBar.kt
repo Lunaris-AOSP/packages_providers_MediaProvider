@@ -437,7 +437,7 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             featureManager.composeLocation(
                 Location.SEARCH_BAR,
                 maxSlots = 1,
