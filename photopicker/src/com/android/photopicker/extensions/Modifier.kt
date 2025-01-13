@@ -20,9 +20,9 @@ import android.os.Build
 import android.view.SurfaceControlViewHost
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -94,18 +94,17 @@ fun Modifier.circleBackground(
 }
 
 /**
- * Transfer necessary touch events occurred on Photos/Albums grid to host at runtime in Embedded
- * Photopicker
+ * Transfer necessary touch events on scrollable objects like a grid or list to host at runtime in
+ * Embedded Photopicker
  *
- * @param state the state of Photos/albums grid. If state is null means Photos/Albums grid has not
- *   requested the custom modifier
+ * @param state the state of a scrollable object.
  * @param isExpanded the updates on current status of embedded photopicker
  * @param host the instance of [SurfaceControlViewHost]
  * @return a [Modifier] to transfer the touch gestures at runtime in Embedded photopicker
  */
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-fun Modifier.transferGridTouchesToHostInEmbedded(
-    state: LazyGridState,
+fun Modifier.transferScrollableTouchesToHostInEmbedded(
+    state: ScrollableState,
     isExpanded: State<Boolean>,
     host: SurfaceControlViewHost,
 ): Modifier {
@@ -114,7 +113,7 @@ fun Modifier.transferGridTouchesToHostInEmbedded(
 }
 
 /**
- * Transfer necessary touch events occurred outside of Photos/Albums grid to host on runtime in
+ * Transfer necessary touch events occurred outside of scrollable objects to host on runtime in
  * Embedded Photopicker
  *
  * @param host the instance of [SurfaceControlViewHost]
@@ -143,8 +142,8 @@ fun Modifier.transferTouchesToHostInEmbedded(
  * composable and the [mediaGrid] composable that backs all media and group grids in Photopicker
  * like [PhotoGrid], [SearchResultsGrid] etc.
  *
- * @param state the state of the lazy grid. If state is null means lazy grid has not requested the
- *   custom modifier
+ * @param state the state of the scrollable object like lazy grid or lazy list. If state is null
+ *   means a scrollable object has not requested the custom modifier
  * @param isExpanded the updates on current status of embedded photopicker
  * @param host the instance of [SurfaceControlViewHost]
  * @param pass the PointerEventPass where the gesture needs to be handled.
@@ -164,7 +163,7 @@ fun Modifier.transferTouchesToHostInEmbedded(
  */
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 private fun Modifier.transferTouchesToSurfaceControlViewHost(
-    state: LazyGridState?,
+    state: ScrollableState?,
     isExpanded: State<Boolean>?,
     host: SurfaceControlViewHost,
     pass: PointerEventPass = PointerEventPass.Initial,
@@ -211,21 +210,18 @@ private fun Modifier.transferTouchesToSurfaceControlViewHost(
                         val shouldTransferToHost =
                             when {
 
-                                // When this isn't attached to a grid, all vertical gestures should
-                                // be transferred.
+                                // When this isn't attached to a scrollable object, all vertical
+                                // gestures should be transferred.
                                 state == null -> true
 
-                                // If the grid is collapsed and vertical touchSlop has been passed,
-                                // touches should be transferred.
+                                // If the scrollable object is collapsed and vertical touchSlop has
+                                // been passed, touches should be transferred.
                                 isGridCollapsed -> true
 
-                                // If the grid isExpanded, scrolled to the first item and the
-                                // gesture
-                                // direction was up (to collapse the Photopicker)
+                                // If the scrollable object isExpanded, scrolled to the first item
+                                // and the gesture direction was up (to collapse the Photopicker)
                                 isGridExpanded &&
-                                    (state.firstVisibleItemIndex == 0 &&
-                                        state.firstVisibleItemScrollOffset == 0 &&
-                                        postSlopOffset.y > 0F) -> true
+                                    (!state.canScrollBackward && postSlopOffset.y > 0F) -> true
 
                                 // Otherwise don't transfer
                                 else -> false
