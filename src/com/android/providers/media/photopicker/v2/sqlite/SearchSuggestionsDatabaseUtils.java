@@ -55,8 +55,8 @@ public class SearchSuggestionsDatabaseUtils {
     // The placeholder values should not be a valid value to any of the columns in the unique
     // constraint.
     public static final String PLACEHOLDER_FOR_NULL = "";
-    static final int TTL_HISTORY_SUGGESTIONS_IN_DAYS = 60;
-    static final int TTL_CACHED_SUGGESTIONS_IN_DAYS = 30;
+    static final int TTL_HISTORY_SUGGESTIONS_IN_DAYS = 7;
+    static final int TTL_CACHED_SUGGESTIONS_IN_DAYS = 3;
 
     /**
      * Save Search Request as search history to serve as search suggestions later.
