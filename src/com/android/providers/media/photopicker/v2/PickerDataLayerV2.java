@@ -1472,7 +1472,9 @@ public class PickerDataLayerV2 {
 
                 final PickerSyncManager syncManager =
                         new PickerSyncManager(getWorkManager(context), context);
-                syncManager.resetCloudSearchResults();
+                final String cloudAuthority = PickerSyncController.getInstanceOrThrow()
+                        .getCloudProviderOrDefault(null);
+                syncManager.resetCloudSearchCache(cloudAuthority);
             }
         } catch (Exception e) {
             Log.e(TAG, "Unexpected error occurred in handleCloudMediaReset", e);
