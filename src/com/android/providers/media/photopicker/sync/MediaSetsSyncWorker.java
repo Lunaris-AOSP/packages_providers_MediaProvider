@@ -40,6 +40,7 @@ import androidx.work.WorkerParameters;
 
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
+import com.android.providers.media.photopicker.v2.PickerNotificationSender;
 import com.android.providers.media.photopicker.v2.sqlite.MediaSetsDatabaseUtil;
 
 import java.util.Arrays;
@@ -143,10 +144,13 @@ public class MediaSetsSyncWorker extends Worker {
                     if (nextPageToken.equals(SYNC_COMPLETE_KEY)) {
                         break;
                     }
+                    // Notify the UI to start displaying the results after fetching each page
+                    PickerNotificationSender.notifyMediaSetsChange(mContext, categoryId);
                 }
             }
         } finally {
             markMediaSetsSyncAsComplete(syncSource, getId());
+            PickerNotificationSender.notifyMediaSetsChange(mContext, categoryId);
         }
     }
 
