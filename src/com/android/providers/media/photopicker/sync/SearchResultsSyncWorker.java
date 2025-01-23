@@ -166,7 +166,7 @@ public class SearchResultsSyncWorker extends Worker {
         final Pair<String, String> resumeKey = getResumeKey(searchRequest, syncSource);
 
         if (SYNC_COMPLETE_RESUME_KEY.equals(resumeKey.first)) {
-            Log.i(TAG, "Sync has already been completed.");
+            Log.i(TAG, "Sync was already complete.");
             return;
         }
 
