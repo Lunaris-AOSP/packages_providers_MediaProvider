@@ -7767,7 +7767,7 @@ public class MediaProvider extends ContentProvider {
             throw new SecurityException(
                     getSecurityExceptionMessage("Picker search media init"));
         }
-        return PickerDataLayerV2.handleNewSearchRequest(getContext(), extras);
+        return PickerDataLayerV2.handleSearchResultsInit(getContext(), extras);
     }
 
     private void initMediaSets(@NonNull Bundle extras) {
