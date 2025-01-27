@@ -735,7 +735,7 @@ public class MediaProvider extends ContentProvider {
                     packageManager.getPackageUidAsUser(
                             packageName, PackageManager.PackageInfoFlags.of(0), userId);
             LocalCallingIdentity lci = LocalCallingIdentity.fromExternal(context, mUserCache, uid);
-            if (!lci.checkCallingPermissionUserSelected()) {
+            if (!lci.checkCallingPermissionUserSelected(/* forDataDelivery */ false)) {
                 String[] packages = lci.getSharedPackageNamesArray();
                 mMediaGrants.removeAllMediaGrantsForPackages(
                         packages, /* reason= */ "Mode changed: " + op, userId);
@@ -3360,11 +3360,13 @@ public class MediaProvider extends ContentProvider {
 
     private ArrayList<String> getIncludedDefaultDirectories() {
         final ArrayList<String> includedDefaultDirs = new ArrayList<>();
-        if (mCallingIdentity.get().checkCallingPermissionVideo(/* forWrite */ true)) {
+        if (mCallingIdentity.get().checkCallingPermissionVideo(/* forWrite */
+                true, /* forDataDelivery */ true)) {
             includedDefaultDirs.add(Environment.DIRECTORY_DCIM);
             includedDefaultDirs.add(Environment.DIRECTORY_PICTURES);
             includedDefaultDirs.add(Environment.DIRECTORY_MOVIES);
-        } else if (mCallingIdentity.get().checkCallingPermissionImages(/* forWrite */ true)) {
+        } else if (mCallingIdentity.get().checkCallingPermissionImages(/* forWrite */
+                true, /* forDataDelivery */ true)) {
             includedDefaultDirs.add(Environment.DIRECTORY_DCIM);
             includedDefaultDirs.add(Environment.DIRECTORY_PICTURES);
         }
