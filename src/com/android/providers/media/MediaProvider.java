@@ -139,7 +139,6 @@ import static com.android.providers.media.PickerUriResolver.PICKER_GET_CONTENT_S
 import static com.android.providers.media.PickerUriResolver.PICKER_SEGMENT;
 import static com.android.providers.media.PickerUriResolver.PICKER_TRANSCODED_SEGMENT;
 import static com.android.providers.media.PickerUriResolver.getMediaUri;
-import static com.android.providers.media.flags.Flags.enableBackupAndRestore;
 import static com.android.providers.media.flags.Flags.indexMediaLatitudeLongitude;
 import static com.android.providers.media.flags.Flags.versionLockdown;
 import static com.android.providers.media.photopicker.data.ItemsProvider.EXTRA_MIME_TYPE_SELECTION;
@@ -1211,8 +1210,7 @@ public class MediaProvider extends ContentProvider {
 
                 mDatabaseBackupAndRecovery.deleteFromDbBackup(helper, deletedRow);
                 if (deletedRow.getVolumeName() != null
-                        && deletedRow.getVolumeName().equalsIgnoreCase(VOLUME_EXTERNAL_PRIMARY)
-                        && enableBackupAndRestore()) {
+                        && deletedRow.getVolumeName().equalsIgnoreCase(VOLUME_EXTERNAL_PRIMARY)) {
                     mExternalPrimaryBackupExecutor.deleteBackupForPath(deletedRow.getPath());
                 }
             });
@@ -1813,11 +1811,7 @@ public class MediaProvider extends ContentProvider {
         // value as NULL, and update the same in the picker db
         detectSpecialFormat(signal);
 
-        if (enableBackupAndRestore()) {
-            Log.i(TAG, "Backup is enabled");
-            // Backup needed for B&R
-            mExternalPrimaryBackupExecutor.doBackup(signal);
-        }
+        mExternalPrimaryBackupExecutor.doBackup(signal);
 
         final long durationMillis = (SystemClock.elapsedRealtime() - startTime);
         Metrics.logIdleMaintenance(MediaStore.VOLUME_EXTERNAL, itemCount,
