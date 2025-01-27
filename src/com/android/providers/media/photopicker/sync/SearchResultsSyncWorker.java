@@ -188,7 +188,7 @@ public class SearchResultsSyncWorker extends Worker {
                             SearchResultsDatabaseUtil.extractContentValuesList(
                                     searchRequestId, cursor, isLocal(authority));
 
-                    SearchResultsDatabaseUtil
+                    int numberOfRowsInserted = SearchResultsDatabaseUtil
                             .cacheSearchResults(getDatabase(), authority, contentValues,
                                     mCancellationSignal);
 
@@ -207,8 +207,11 @@ public class SearchResultsSyncWorker extends Worker {
                     // Mark sync as completed after getting the first page to start returning
                     // search results to the UI.
                     if (mMarkedSyncWorkAsComplete) {
-                        PickerNotificationSender
-                                .notifySearchResultsChange(mContext, searchRequestId);
+                        // Notify the UI that a change has been made in the DB
+                        if (numberOfRowsInserted > 0) {
+                            PickerNotificationSender
+                                    .notifySearchResultsChange(mContext, searchRequestId);
+                        }
                     } else {
                         markSearchResultsSyncAsComplete(syncSource, getId());
                         mMarkedSyncWorkAsComplete = true;
