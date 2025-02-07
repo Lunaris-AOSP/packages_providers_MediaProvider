@@ -29,8 +29,8 @@ import static com.android.providers.media.util.PermissionUtils.checkPermissionIn
 import static com.android.providers.media.util.PermissionUtils.checkPermissionManager;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionQueryAllPackages;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionReadAudio;
+import static com.android.providers.media.util.PermissionUtils.checkPermissionReadForLegacyStorage;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionReadImages;
-import static com.android.providers.media.util.PermissionUtils.checkPermissionReadStorage;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionReadVideo;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionReadVisualUserSelected;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionSelf;
@@ -576,8 +576,14 @@ public class LocalCallingIdentity {
     }
 
     private boolean isLegacyReadInternal() {
-        return hasPermission(PERMISSION_IS_LEGACY_GRANTED)
-                && checkPermissionReadStorage(context, pid, uid, getPackageName(), attributionTag);
+        boolean isLegacyStorageGranted = hasPermission(PERMISSION_IS_LEGACY_GRANTED);
+        if (!isLegacyStorageGranted) {
+            return false;
+        }
+
+        boolean isTargetSdkAtleastT = getTargetSdkVersion() >= Build.VERSION_CODES.TIRAMISU;
+        return checkPermissionReadForLegacyStorage(context, pid, uid, getPackageName(),
+                attributionTag, isTargetSdkAtleastT);
     }
 
     /** System internals or callers holding permission have no redaction */
