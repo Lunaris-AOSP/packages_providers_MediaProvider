@@ -33,6 +33,7 @@ import android.util.Pair;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.providers.media.photopicker.data.PickerDatabaseHelper;
+import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
 import com.android.providers.media.photopicker.v2.model.MediaSetsSyncRequestParams;
 
 import org.junit.After;
@@ -71,7 +72,7 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testInsertMediaSetMetadataIntoMediaSetsTable() {
+    public void testInsertMediaSetMetadataIntoMediaSetsTable() throws RequestObsoleteException {
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add(mMimeType);
@@ -83,14 +84,16 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testInsertMediaSetMetadataIntoMediaTableMimeTypeFilter() {
+    public void testInsertMediaSetMetadataIntoMediaTableMimeTypeFilter()
+            throws RequestObsoleteException {
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> firstMimeTypeFilter = new ArrayList<>();
         firstMimeTypeFilter.add("image/*");
         firstMimeTypeFilter.add("video/*");
 
         int firstInsertionCount = MediaSetsDatabaseUtil.cacheMediaSets(
-                mDatabase, c, mCategoryId, mAuthority, firstMimeTypeFilter);
+                mDatabase, c, mCategoryId, mAuthority, firstMimeTypeFilter
+               );
         assertEquals("Count of inserted media sets should be equal to the cursor size",
                 /*expected*/ c.getCount(), /*actual*/ firstInsertionCount);
 
@@ -109,7 +112,7 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testInsertMediaSetMetadataWhenMediaSetIdIsNull() {
+    public void testInsertMediaSetMetadataWhenMediaSetIdIsNull() throws RequestObsoleteException {
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add(mMimeType);
 
@@ -129,7 +132,7 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testGetMediaSetMetadataForCategory() {
+    public void testGetMediaSetMetadataForCategory() throws RequestObsoleteException {
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add(mMimeType);
@@ -163,7 +166,7 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testUpdateAndGetMediaInMediaSetResumeKey() {
+    public void testUpdateAndGetMediaInMediaSetResumeKey() throws RequestObsoleteException {
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add(mMimeType);
@@ -201,7 +204,8 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testGetMediaSetIdAndMimeTypesUsingMediaSetPickerId() {
+    public void testGetMediaSetIdAndMimeTypesUsingMediaSetPickerId()
+            throws RequestObsoleteException {
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add(mMimeType);
@@ -234,7 +238,7 @@ public class MediaSetsDatabaseUtilsTest {
     }
 
     @Test
-    public void testClearMediaSetsCache() {
+    public void testClearMediaSetsCache() throws RequestObsoleteException {
         // Insert metadata into the table
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> mimeTypes = new ArrayList<>();

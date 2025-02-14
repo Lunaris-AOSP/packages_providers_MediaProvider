@@ -51,6 +51,7 @@ import com.android.providers.media.cloudproviders.SearchProvider;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.data.PickerDatabaseHelper;
 import com.android.providers.media.photopicker.data.PickerDbFacade;
+import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
 import com.android.providers.media.photopicker.v2.sqlite.MediaInMediaSetsDatabaseUtil;
 import com.android.providers.media.photopicker.v2.sqlite.MediaSetsDatabaseUtil;
 import com.android.providers.media.photopicker.v2.sqlite.PickerSQLConstants;
@@ -113,7 +114,7 @@ public class MediaSetsResetWorkerTest {
 
     @Test
     public void testMediaSetsAndMediaSetsContentCacheReset() throws
-            ExecutionException, InterruptedException   {
+            ExecutionException, InterruptedException, RequestObsoleteException {
         Cursor c = getCursorForMediaSetInsertionTest();
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add(mMimeType);

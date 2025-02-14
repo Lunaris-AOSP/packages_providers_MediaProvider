@@ -61,8 +61,7 @@ public class MediaInMediaSetsDatabaseUtil {
      */
     public static int cacheMediaOfMediaSet(
             @NonNull SQLiteDatabase database,
-            @Nullable List<ContentValues> mediaListToInsert,
-            @NonNull String authority) {
+            @Nullable List<ContentValues> mediaListToInsert, @NonNull String authority) {
 
         requireNonNull(database);
         requireNonNull(authority);

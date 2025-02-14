@@ -29,6 +29,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.CancellationSignal;
+import android.os.OperationCanceledException;
 import android.provider.CloudMediaProviderContract;
 import android.util.Log;
 
@@ -124,7 +125,7 @@ public class MediaSetsSyncWorker extends Worker {
     private void syncMediaSets(
             int syncSource, @NonNull String categoryId,
             @NonNull String categoryAuthority, @Nullable String[] mimeTypes)
-            throws RequestObsoleteException, IllegalArgumentException {
+            throws RequestObsoleteException, IllegalArgumentException, OperationCanceledException {
 
         List<String> mimeTypesList = mimeTypes == null || mimeTypes.length == 0 ? null
                 : Arrays.asList(mimeTypes);
@@ -183,7 +184,7 @@ public class MediaSetsSyncWorker extends Worker {
             String categoryId,
             String nextPageToken,
             String[] mimeTypes,
-            CancellationSignal cancellationSignal) {
+            CancellationSignal cancellationSignal) throws OperationCanceledException {
         final Cursor cursor = client.fetchMediaSetsFromCmp(
                 categoryId, nextPageToken, PAGE_SIZE, mimeTypes, cancellationSignal);
 
@@ -238,5 +239,11 @@ public class MediaSetsSyncWorker extends Worker {
 
     private SQLiteDatabase getDatabase() {
         return PickerSyncController.getInstanceOrThrow().getDbFacade().getDatabase();
+    }
+
+    @Override
+    public void onStopped() {
+        // Mark the request as cancelled so that the cancellation can be propagated to subtasks.
+        mCancellationSignal.cancel();
     }
 }
