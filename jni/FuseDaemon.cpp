@@ -726,6 +726,28 @@ namespace fuse {
  *
  */
 
+bool IsUpstreamPassthroughSupported() {
+    // Upstream passthrough requires some modifications to work. If those are present,
+    // /sys/fs/fuse/fuse_passthrough will read 'supported\n'
+    // - see fs/fuse/inode.c in the kernel source
+
+    string contents;
+    const char* filename = "/sys/fs/fuse/features/fuse_passthrough";
+    if (!android::base::ReadFileToString(filename, &contents)) {
+        LOG(INFO) << "fuse-passthrough is disabled because " << filename << " cannot be read";
+        return false;
+    }
+
+    if (contents == "supported\n") {
+        LOG(INFO) << "fuse-passthrough is enabled because " << filename << " reads 'supported'";
+        return true;
+    } else {
+        LOG(INFO) << "fuse-passthrough is disabled because " << filename
+                  << " does not read 'supported'";
+        return false;
+    }
+}
+
 static void pf_init(void* userdata, struct fuse_conn_info* conn) {
     struct fuse* fuse = reinterpret_cast<struct fuse*>(userdata);
 
@@ -765,7 +787,8 @@ static void pf_init(void* userdata, struct fuse_conn_info* conn) {
             //   b. Files requiring redaction are still faster than no-passthrough devices that use
             //      direct_io
             disable_splice_write = true;
-        } else if (conn->capable & FUSE_CAP_PASSTHROUGH_UPSTREAM) {
+        } else if ((conn->capable & FUSE_CAP_PASSTHROUGH_UPSTREAM) &&
+                   IsUpstreamPassthroughSupported()) {
             mask |= FUSE_CAP_PASSTHROUGH_UPSTREAM;
             disable_splice_write = true;
             fuse->upstream_passthrough = true;
@@ -1464,7 +1487,7 @@ static handle* create_handle_for_node(struct fuse* fuse, const string& path, int
     }
 
     if (fuse->passthrough && allow_passthrough) {
-        *keep_cache = transforms_complete && !fuse->upstream_passthrough;
+        *keep_cache = transforms_complete;
         // We only enabled passthrough iff these 2 conditions hold
         // 1. Redaction is not needed
         // 2. Node transforms are completed, e.g transcoding.
