@@ -26,7 +26,6 @@ import static com.android.providers.media.photopicker.sync.SyncTrackerRegistry.m
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.OperationCanceledException;
@@ -39,8 +38,8 @@ import androidx.work.ListenableWorker;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
+import com.android.providers.media.photopicker.v2.PhotopickerSyncHelper;
 import com.android.providers.media.photopicker.v2.PickerNotificationSender;
 import com.android.providers.media.photopicker.v2.sqlite.MediaSetsDatabaseUtil;
 
@@ -60,6 +59,7 @@ public class MediaSetsSyncWorker extends Worker {
     private final Context mContext;
     private final CancellationSignal mCancellationSignal;
     private boolean mMarkedSyncWorkAsComplete = false;
+    private final PhotopickerSyncHelper mPhotopickerSyncHelper;
 
 
     public MediaSetsSyncWorker(@NonNull Context context, @NonNull WorkerParameters parameters) {
@@ -67,6 +67,7 @@ public class MediaSetsSyncWorker extends Worker {
 
         mContext = context;
         mCancellationSignal = new CancellationSignal();
+        mPhotopickerSyncHelper = new PhotopickerSyncHelper();
     }
 
     @NonNull
@@ -143,7 +144,7 @@ public class MediaSetsSyncWorker extends Worker {
                         searchClient, categoryId, nextPageToken, mimeTypes, mCancellationSignal)) {
                     // Cache the retrieved media sets
                     int numberOfRowsInserted = MediaSetsDatabaseUtil.cacheMediaSets(
-                            getDatabase(), mediaSetsCursor, categoryId,
+                            mPhotopickerSyncHelper.getDatabase(), mediaSetsCursor, categoryId,
                             categoryAuthority, mimeTypesList);
                     Log.i(TAG, "Cached " + numberOfRowsInserted + " media sets");
 
@@ -211,39 +212,16 @@ public class MediaSetsSyncWorker extends Worker {
 
     private void checkIfCurrentCloudProviderAuthorityHasChanged(@NonNull String authority)
             throws RequestObsoleteException {
-        if (isAuthorityLocal(authority)) {
+        if (mPhotopickerSyncHelper.isAuthorityLocal(authority)) {
             return;
         }
-        final String currentCloudAuthority = getCurrentCloudProviderAuthority();
+        final String currentCloudAuthority =
+                mPhotopickerSyncHelper.getCurrentCloudProviderAuthority();
         if (!authority.equals(currentCloudAuthority)) {
             throw new RequestObsoleteException("Cloud provider authority has changed."
                     + " Sync will not be continued."
                     + " Current cloud provider authority: " + currentCloudAuthority
                     + " Cloud provider authority to sync with: " + authority);
         }
-    }
-
-    private boolean isAuthorityLocal(@NonNull String authority) {
-        return getLocalProviderAuthority().equals(authority);
-    }
-
-    @Nullable
-    private String getLocalProviderAuthority() {
-        return PickerSyncController.getInstanceOrThrow().getLocalProvider();
-    }
-
-    @Nullable
-    private String getCurrentCloudProviderAuthority() {
-        return PickerSyncController.getInstanceOrThrow().getCloudProvider();
-    }
-
-    private SQLiteDatabase getDatabase() {
-        return PickerSyncController.getInstanceOrThrow().getDbFacade().getDatabase();
-    }
-
-    @Override
-    public void onStopped() {
-        // Mark the request as cancelled so that the cancellation can be propagated to subtasks.
-        mCancellationSignal.cancel();
     }
 }
