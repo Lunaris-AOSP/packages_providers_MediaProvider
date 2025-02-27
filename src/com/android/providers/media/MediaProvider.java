@@ -11888,14 +11888,15 @@ public class MediaProvider extends ContentProvider {
         final ContentResolver resolver = getContext().getContentResolver();
         final Uri uri = getBaseContentUri(volumeName);
         // TODO(b/182396009) we probably also want to notify clone profile (and vice versa)
-        resolver.notifyChange(getBaseContentUri(volumeName), null);
+        ForegroundThread.getExecutor().execute(() -> {
+            resolver.notifyChange(getBaseContentUri(volumeName), null);
+        });
 
         if (LOGV) Log.v(TAG, "Attached volume: " + volume);
         if (!MediaStore.VOLUME_INTERNAL.equals(volumeName)) {
-            // Also notify on synthetic view of all devices
-            resolver.notifyChange(getBaseContentUri(MediaStore.VOLUME_EXTERNAL), null);
-
             ForegroundThread.getExecutor().execute(() -> {
+                // Also notify on synthetic view of all devices
+                resolver.notifyChange(getBaseContentUri(MediaStore.VOLUME_EXTERNAL), null);
                 mExternalDatabase.runWithTransaction((db) -> {
                     ensureNecessaryFolders(volume, db);
                     return null;
@@ -11956,11 +11957,15 @@ public class MediaProvider extends ContentProvider {
         }
 
         final ContentResolver resolver = getContext().getContentResolver();
-        resolver.notifyChange(getBaseContentUri(volumeName), null);
+        ForegroundThread.getExecutor().execute(() -> {
+            resolver.notifyChange(getBaseContentUri(volumeName), null);
+        });
 
         if (!MediaStore.VOLUME_INTERNAL.equals(volumeName)) {
-            // Also notify on synthetic view of all devices
-            resolver.notifyChange(getBaseContentUri(MediaStore.VOLUME_EXTERNAL), null);
+            ForegroundThread.getExecutor().execute(() -> {
+                // Also notify on synthetic view of all devices
+                resolver.notifyChange(getBaseContentUri(MediaStore.VOLUME_EXTERNAL), null);
+            });
         }
 
         if (LOGV) Log.v(TAG, "Detached volume: " + volumeName);
