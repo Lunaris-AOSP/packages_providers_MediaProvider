@@ -75,13 +75,14 @@ import java.util.Objects;
 public class PickerDbFacade {
     private static final String VIDEO_MIME_TYPES = "video/%";
     private final Context mContext;
-    private final SQLiteDatabase mDatabase;
+    private final PickerDatabaseHelper mPickerDatabaseHelper;
     private final PickerSyncLockManager mPickerSyncLockManager;
     private final String mLocalProvider;
     // This is the cloud provider the database is synced with. It can be set as null to disable
     // cloud queries when database is not in sync with the current cloud provider.
     @Nullable
     private String mCloudProvider;
+
 
     public PickerDbFacade(Context context, PickerSyncLockManager pickerSyncLockManager) {
         this(context, pickerSyncLockManager, PickerSyncController.LOCAL_PICKER_PROVIDER_AUTHORITY);
@@ -98,7 +99,7 @@ public class PickerDbFacade {
             String localProvider, PickerDatabaseHelper dbHelper) {
         mContext = context;
         mLocalProvider = localProvider;
-        mDatabase = dbHelper.getWritableDatabase();
+        mPickerDatabaseHelper = dbHelper;
         mPickerSyncLockManager = pickerSyncLockManager;
     }
 
@@ -300,21 +301,21 @@ public class PickerDbFacade {
      * db.
      */
     public DbWriteOperation beginAddMediaOperation(String authority) {
-        return new AddMediaOperation(mDatabase, isLocal(authority));
+        return new AddMediaOperation(getDatabase(), isLocal(authority));
     }
 
     /**
      * Returns {@link DbWriteOperation} that can be used to insert grants into the database.
      */
     public DbWriteOperation beginInsertGrantsOperation() {
-        return new InsertGrantsOperation(mDatabase, /* isLocal */ true);
+        return new InsertGrantsOperation(getDatabase(), /* isLocal */ true);
     }
 
     /**
      * Returns {@link DbWriteOperation} that can be used to clear all grants from the database.
      */
     public DbWriteOperation beginClearGrantsOperation(String[] packageNames, int userId) {
-        return new ClearGrantsOperation(mDatabase, /* isLocal */ true, packageNames, userId);
+        return new ClearGrantsOperation(getDatabase(), /* isLocal */ true, packageNames, userId);
     }
 
     /**
@@ -322,7 +323,7 @@ public class PickerDbFacade {
      * into the picker db.
      */
     public DbWriteOperation beginAddAlbumMediaOperation(String authority, String albumId) {
-        return new AddAlbumMediaOperation(mDatabase, isLocal(authority), albumId);
+        return new AddAlbumMediaOperation(getDatabase(), isLocal(authority), albumId);
     }
 
     /**
@@ -330,7 +331,7 @@ public class PickerDbFacade {
      * picker db.
      */
     public DbWriteOperation beginRemoveMediaOperation(String authority) {
-        return new RemoveMediaOperation(mDatabase, isLocal(authority));
+        return new RemoveMediaOperation(getDatabase(), isLocal(authority));
     }
 
     /**
@@ -340,7 +341,7 @@ public class PickerDbFacade {
      * @param authority to determine whether local or cloud media should be cleared
      */
     public DbWriteOperation beginResetMediaOperation(String authority) {
-        return new ResetMediaOperation(mDatabase, isLocal(authority));
+        return new ResetMediaOperation(getDatabase(), isLocal(authority));
     }
 
     /**
@@ -354,7 +355,7 @@ public class PickerDbFacade {
      * @param authority to determine whether local or cloud media should be cleared
      */
     public DbWriteOperation beginResetAlbumMediaOperation(String authority, String albumId) {
-        return new ResetAlbumOperation(mDatabase, isLocal(authority), albumId);
+        return new ResetAlbumOperation(getDatabase(), isLocal(authority), albumId);
     }
 
     /**
@@ -364,7 +365,7 @@ public class PickerDbFacade {
      * @param authority to determine whether local or cloud media should be updated
      */
     public UpdateMediaOperation beginUpdateMediaOperation(String authority) {
-        return new UpdateMediaOperation(mDatabase, isLocal(authority));
+        return new UpdateMediaOperation(getDatabase(), isLocal(authority));
     }
 
     /**
@@ -1168,7 +1169,7 @@ public class PickerDbFacade {
     private Cursor queryMediaIdForAppsLocked(@NonNull SQLiteQueryBuilder qb,
             @NonNull String[] projection, @NonNull String[] selectionArgs,
             String pickerSegmentType) {
-        return qb.query(mDatabase, getMediaStoreProjectionLocked(projection, pickerSegmentType),
+        return qb.query(getDatabase(), getMediaStoreProjectionLocked(projection, pickerSegmentType),
                 /* selection */ null, selectionArgs, /* groupBy */ null, /* having */ null,
                 /* orderBy */ null, /* limitStr */ null);
     }
@@ -1196,9 +1197,9 @@ public class PickerDbFacade {
             }
             addMimeTypesToQueryBuilderAndSelectionArgs(qb, selectionArgs, query.mMimeTypes);
 
-            Cursor cursor = qb.query(mDatabase, getMergedAlbumProjection(), /* selection */ null,
-                    selectionArgs.toArray(new String[0]), /* groupBy */ null, /* having */ null,
-                    /* orderBy */ null, /* limit */ null);
+            Cursor cursor = qb.query(getDatabase(), getMergedAlbumProjection(),
+                    /* selection */ null, selectionArgs.toArray(new String[0]), /* groupBy */ null,
+                    /* having */ null, /* orderBy */ null, /* limit */ null);
 
             if (cursor == null || !cursor.moveToFirst()) {
                 continue;
@@ -1296,7 +1297,7 @@ public class PickerDbFacade {
 
     private Cursor queryMediaForUiLocked(SQLiteQueryBuilder qb, String[] selectionArgs,
             String orderBy, String limitStr) {
-        return qb.query(mDatabase, getCloudMediaProjectionLocked(), /* selection */ null,
+        return qb.query(getDatabase(), getCloudMediaProjectionLocked(), /* selection */ null,
                 selectionArgs, /* groupBy */ null, /* having */ null, orderBy, limitStr);
     }
 
@@ -1939,6 +1940,6 @@ public class PickerDbFacade {
      * Returns the associated SQLiteDatabase instance.
      */
     public SQLiteDatabase getDatabase() {
-        return mDatabase;
+        return mPickerDatabaseHelper.getWritableDatabase();
     }
 }
