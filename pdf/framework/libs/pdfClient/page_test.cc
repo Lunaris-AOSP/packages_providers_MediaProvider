@@ -23,10 +23,11 @@
 #include <memory>
 #include <string>
 
-#include "page_object.h"
-
 // Goes first due to conflicts.
 #include "document.h"
+#include "image_object.h"
+#include "page_object.h"
+#include "path_object.h"
 #include "rect.h"
 // #include "file/base/path.h"
 #include "cpp/fpdf_scopers.h"
@@ -234,11 +235,11 @@ TEST(Test, AddImagePageObjectTest) {
     auto imageObject = std::make_unique<ImageObject>();
 
     // Create FPDF Bitmap.
-    imageObject->bitmap = ScopedFPDFBitmap(FPDFBitmap_Create(100, 100, 1));
-    FPDFBitmap_FillRect(imageObject->bitmap.get(), 0, 0, 100, 100, 0xFF000000);
+    imageObject->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_Create(100, 100, 1));
+    FPDFBitmap_FillRect(imageObject->bitmap_.get(), 0, 0, 100, 100, 0xFF000000);
 
     // Set Matrix.
-    imageObject->matrix = {1.0f, 0, 0, 1.0f, 0, 0};
+    imageObject->matrix_ = {1.0f, 0, 0, 1.0f, 0, 0};
 
     // Add the page object.
     ASSERT_EQ(page->AddPageObject(std::move(imageObject)), initialPageObjects.size());
@@ -266,16 +267,16 @@ TEST(Test, AddPathPageObject) {
     auto pathObject = std::make_unique<PathObject>();
 
     // Command Simple Path
-    pathObject->segments.emplace_back(PathObject::Segment::Command::Move, 0.0f, 0.0f);
-    pathObject->segments.emplace_back(PathObject::Segment::Command::Line, 100.0f, 150.0f);
-    pathObject->segments.emplace_back(PathObject::Segment::Command::Line, 150.0f, 150.0f);
+    pathObject->segments_.emplace_back(PathObject::Segment::Command::Move, 0.0f, 0.0f);
+    pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 100.0f, 150.0f);
+    pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 150.0f, 150.0f);
 
     // Set Draw Mode
-    pathObject->is_fill_mode = false;
-    pathObject->is_stroke = true;
+    pathObject->is_fill_ = false;
+    pathObject->is_stroke_ = true;
 
     // Set PathObject Matrix.
-    pathObject->matrix = {1.0f, 0, 0, 1.0f, 0, 0};
+    pathObject->matrix_ = {1.0f, 0, 0, 1.0f, 0, 0};
 
     // Add the page object.
     ASSERT_EQ(page->AddPageObject(std::move(pathObject)), initialPageObjects.size());
@@ -319,11 +320,11 @@ TEST(Test, UpdateImagePageObjectTest) {
     auto imageObject = std::make_unique<ImageObject>();
 
     // Create FPDF Bitmap.
-    imageObject->bitmap = ScopedFPDFBitmap(FPDFBitmap_Create(100, 110, 1));
-    FPDFBitmap_FillRect(imageObject->bitmap.get(), 0, 0, 100, 110, 0xFF0000FF);
+    imageObject->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_Create(100, 110, 1));
+    FPDFBitmap_FillRect(imageObject->bitmap_.get(), 0, 0, 100, 110, 0xFF0000FF);
 
     // Set Matrix.
-    imageObject->matrix = {2.0f, 0, 0, 2.0f, 0, 0};
+    imageObject->matrix_ = {2.0f, 0, 0, 2.0f, 0, 0};
 
     // Update the page object.
     EXPECT_TRUE(page->UpdatePageObject(0, std::move(imageObject)));
@@ -335,18 +336,18 @@ TEST(Test, UpdateImagePageObjectTest) {
     ASSERT_EQ(initialPageObjects.size(), updatedPageObjects.size());
 
     // Check for updated bitmap.
-    ASSERT_EQ(FPDFBitmap_GetWidth(static_cast<ImageObject*>(updatedPageObjects[0])->bitmap.get()),
+    ASSERT_EQ(FPDFBitmap_GetWidth(static_cast<ImageObject*>(updatedPageObjects[0])->bitmap_.get()),
               100);
-    ASSERT_EQ(FPDFBitmap_GetHeight(static_cast<ImageObject*>(updatedPageObjects[0])->bitmap.get()),
+    ASSERT_EQ(FPDFBitmap_GetHeight(static_cast<ImageObject*>(updatedPageObjects[0])->bitmap_.get()),
               110);
 
     // Check for updated matrix.
-    ASSERT_EQ(updatedPageObjects[0]->matrix.a, 2.0f);
-    ASSERT_EQ(updatedPageObjects[0]->matrix.b, 0.0f);
-    ASSERT_EQ(updatedPageObjects[0]->matrix.c, 0.0f);
-    ASSERT_EQ(updatedPageObjects[0]->matrix.d, 2.0f);
-    ASSERT_EQ(updatedPageObjects[0]->matrix.e, 0.0f);
-    ASSERT_EQ(updatedPageObjects[0]->matrix.f, 0.0f);
+    ASSERT_EQ(updatedPageObjects[0]->matrix_.a, 2.0f);
+    ASSERT_EQ(updatedPageObjects[0]->matrix_.b, 0.0f);
+    ASSERT_EQ(updatedPageObjects[0]->matrix_.c, 0.0f);
+    ASSERT_EQ(updatedPageObjects[0]->matrix_.d, 2.0f);
+    ASSERT_EQ(updatedPageObjects[0]->matrix_.e, 0.0f);
+    ASSERT_EQ(updatedPageObjects[0]->matrix_.f, 0.0f);
 }
 
 TEST(Test, UpdatePathPageObjectTest) {
@@ -360,14 +361,14 @@ TEST(Test, UpdatePathPageObjectTest) {
     auto pathObject = std::make_unique<PathObject>();
 
     // Update fill Color.
-    pathObject->fill_color = Color(255, 0, 0, 255);
+    pathObject->fill_color_ = Color(255, 0, 0, 255);
 
     // Update Draw Mode.
-    pathObject->is_fill_mode = true;
-    pathObject->is_stroke = false;
+    pathObject->is_fill_ = true;
+    pathObject->is_stroke_ = false;
 
     // Set Matrix.
-    pathObject->matrix = {2.0f, 0, 0, 2.0f, 0, 0};
+    pathObject->matrix_ = {2.0f, 0, 0, 2.0f, 0, 0};
 
     // Update the page object.
     EXPECT_TRUE(page->UpdatePageObject(1, std::move(pathObject)));
@@ -376,22 +377,22 @@ TEST(Test, UpdatePathPageObjectTest) {
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
 
     // Check for updated fill Color.
-    ASSERT_EQ(updatedPageObjects[1]->fill_color.r, 255);
-    ASSERT_EQ(updatedPageObjects[1]->fill_color.b, 0);
-    ASSERT_EQ(updatedPageObjects[1]->fill_color.g, 0);
-    ASSERT_EQ(updatedPageObjects[1]->fill_color.a, 255);
+    ASSERT_EQ(updatedPageObjects[1]->fill_color_.r, 255);
+    ASSERT_EQ(updatedPageObjects[1]->fill_color_.b, 0);
+    ASSERT_EQ(updatedPageObjects[1]->fill_color_.g, 0);
+    ASSERT_EQ(updatedPageObjects[1]->fill_color_.a, 255);
 
     // Check for updated Draw Mode.
-    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->is_fill_mode, true);
-    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->is_stroke, false);
+    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->is_fill_, true);
+    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->is_stroke_, false);
 
     // Check for updated matrix.
-    ASSERT_EQ(updatedPageObjects[1]->matrix.a, 2.0f);
-    ASSERT_EQ(updatedPageObjects[1]->matrix.b, 0.0f);
-    ASSERT_EQ(updatedPageObjects[1]->matrix.c, 0.0f);
-    ASSERT_EQ(updatedPageObjects[1]->matrix.d, 2.0f);
-    ASSERT_EQ(updatedPageObjects[1]->matrix.e, 0.0f);
-    ASSERT_EQ(updatedPageObjects[1]->matrix.f, 0.0f);
+    ASSERT_EQ(updatedPageObjects[1]->matrix_.a, 2.0f);
+    ASSERT_EQ(updatedPageObjects[1]->matrix_.b, 0.0f);
+    ASSERT_EQ(updatedPageObjects[1]->matrix_.c, 0.0f);
+    ASSERT_EQ(updatedPageObjects[1]->matrix_.d, 2.0f);
+    ASSERT_EQ(updatedPageObjects[1]->matrix_.e, 0.0f);
+    ASSERT_EQ(updatedPageObjects[1]->matrix_.f, 0.0f);
 }
 
 TEST(Test, GetPageAnnotationsTest) {
@@ -433,11 +434,11 @@ TEST(Test, AddStampAnnotationTest) {
     auto imageObject = std::make_unique<ImageObject>();
 
     // Create FPDF Bitmap.
-    imageObject->bitmap = ScopedFPDFBitmap(FPDFBitmap_Create(100, 100, 1));
-    FPDFBitmap_FillRect(imageObject->bitmap.get(), 0, 0, 100, 100, 0xFF000000);
+    imageObject->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_Create(100, 100, 1));
+    FPDFBitmap_FillRect(imageObject->bitmap_.get(), 0, 0, 100, 100, 0xFF000000);
 
     // Set Matrix.
-    imageObject->matrix = {1.0f, 0, 0, 1.0f, 0, 0};
+    imageObject->matrix_ = {1.0f, 0, 0, 1.0f, 0, 0};
 
     // Add the page object.
     stampAnnotation->AddObject(std::move(imageObject));
@@ -446,16 +447,16 @@ TEST(Test, AddStampAnnotationTest) {
     auto pathObject = std::make_unique<PathObject>();
 
     // Command Simple Path
-    pathObject->segments.emplace_back(PathObject::Segment::Command::Move, 0.0f, 0.0f);
-    pathObject->segments.emplace_back(PathObject::Segment::Command::Line, 100.0f, 150.0f);
-    pathObject->segments.emplace_back(PathObject::Segment::Command::Line, 150.0f, 150.0f);
+    pathObject->segments_.emplace_back(PathObject::Segment::Command::Move, 0.0f, 0.0f);
+    pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 100.0f, 150.0f);
+    pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 150.0f, 150.0f);
 
     // Set Draw Mode
-    pathObject->is_fill_mode = false;
-    pathObject->is_stroke = true;
+    pathObject->is_fill_ = false;
+    pathObject->is_stroke_ = true;
 
     // Set PathObject Matrix.
-    pathObject->matrix = {1.0f, 0, 0, 1.0f, 0, 0};
+    pathObject->matrix_ = {1.0f, 0, 0, 1.0f, 0, 0};
 
     // Add the page object.
     stampAnnotation->AddObject(std::move(pathObject));
