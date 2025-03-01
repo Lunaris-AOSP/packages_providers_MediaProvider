@@ -29,6 +29,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.CancellationSignal;
+import android.os.OperationCanceledException;
 import android.provider.CloudMediaProviderContract;
 import android.util.Log;
 import android.util.Pair;
@@ -133,7 +134,7 @@ public class MediaInMediaSetsSyncWorker extends Worker {
             int syncSource, @NonNull String mediaSetId,
             @NonNull Long mediaSetPickerId, @NonNull String mediaSetAuthority,
             @Nullable String[] mimeTypes)
-            throws RequestObsoleteException, IllegalArgumentException {
+            throws RequestObsoleteException, IllegalArgumentException, OperationCanceledException {
         final PickerSearchProviderClient searchClient =
                 PickerSearchProviderClient.create(mContext, mediaSetAuthority);
 
@@ -223,7 +224,7 @@ public class MediaInMediaSetsSyncWorker extends Worker {
     private Cursor fetchMediaInMediaSetFromCmp(
             @NonNull PickerSearchProviderClient pickerSearchProviderClient,
             @NonNull String mediaSetId, @Nullable String resumePageToken,
-            @Nullable String[] mimeTypes) {
+            @Nullable String[] mimeTypes) throws OperationCanceledException {
         final Cursor cursor = pickerSearchProviderClient.fetchMediasInMediaSetFromCmp(
                 mediaSetId,
                 resumePageToken,
@@ -309,5 +310,11 @@ public class MediaInMediaSetsSyncWorker extends Worker {
 
     private SQLiteDatabase getDatabase() {
         return PickerSyncController.getInstanceOrThrow().getDbFacade().getDatabase();
+    }
+
+    @Override
+    public void onStopped() {
+        // Mark the request as cancelled so that the cancellation can be propagated to subtasks.
+        mCancellationSignal.cancel();
     }
 }
