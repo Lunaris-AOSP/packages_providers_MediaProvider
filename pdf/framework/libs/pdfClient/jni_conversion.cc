@@ -19,6 +19,7 @@
 #include <android/bitmap.h>
 #include <string.h>
 
+#include "image_object.h"
 #include "logging.h"
 #include "rect.h"
 
@@ -594,33 +595,33 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
                     env->GetMethodID(path_object_class, "<init>", funcsig("V", kPath).c_str());
 
             // Create Java Path from Native PathSegments.
-            jobject java_path = ToJavaPath(env, path_object->segments, converter);
+            jobject java_path = ToJavaPath(env, path_object->segments_, converter);
 
             // Create Java PathObject Instance.
             java_page_object = env->NewObject(path_object_class, init_path, java_path);
 
             // Set Java PathObject FillColor.
-            if (path_object->is_fill_mode) {
+            if (path_object->is_fill_) {
                 static jmethodID set_fill_color = env->GetMethodID(
                         path_object_class, "setFillColor", funcsig("V", kColor).c_str());
 
                 env->CallVoidMethod(java_page_object, set_fill_color,
-                                    ToJavaColor(env, path_object->fill_color));
+                                    ToJavaColor(env, path_object->fill_color_));
             }
 
             // Set Java PathObject StrokeColor.
-            if (path_object->is_stroke) {
+            if (path_object->is_stroke_) {
                 static jmethodID set_stroke_color = env->GetMethodID(
                         path_object_class, "setStrokeColor", funcsig("V", kColor).c_str());
 
                 env->CallVoidMethod(java_page_object, set_stroke_color,
-                                    ToJavaColor(env, path_object->stroke_color));
+                                    ToJavaColor(env, path_object->stroke_color_));
             }
 
             // Set Java Stroke Width.
             static jmethodID set_stroke_width =
                     env->GetMethodID(path_object_class, "setStrokeWidth", "(F)V");
-            env->CallVoidMethod(java_page_object, set_stroke_width, path_object->stroke_width);
+            env->CallVoidMethod(java_page_object, set_stroke_width, path_object->stroke_width_);
 
             break;
         }
@@ -639,7 +640,7 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
 
             // Create Java Bitmap from Native Bitmap Buffer.
             jobject java_bitmap =
-                    ToJavaBitmap(env, buffer, image_object->width, image_object->height);
+                    ToJavaBitmap(env, buffer, image_object->width_, image_object->height_);
 
             // Create Java ImageObject Instance.
             java_page_object = env->NewObject(image_object_class, init_image, java_bitmap);
@@ -661,7 +662,7 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
     // Set Java Matrix
     static jmethodID set_matrix =
             env->GetMethodID(page_object_class, "setMatrix", funcsig("V", kMatrix).c_str());
-    env->CallVoidMethod(java_page_object, set_matrix, ToJavaMatrix(env, page_object->matrix));
+    env->CallVoidMethod(java_page_object, set_matrix, ToJavaMatrix(env, page_object->matrix_));
 
     return java_page_object;
 }
@@ -731,7 +732,7 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             env->GetFloatArrayRegion(java_approximate, 0, size, path_approximate);
 
             // Set PathObject Data PathSegments.
-            auto& segments = path_object->segments;
+            auto& segments = path_object->segments_;
             for (int i = 0; i < size; i += 3) {
                 // Get DeviceToPage Coordinates
                 Point_f output =
@@ -749,9 +750,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             jobject java_fill_color = env->CallObjectMethod(java_page_object, get_fill_color);
 
             // Set PathObject Data Fill Mode and Fill Color
-            path_object->is_fill_mode = (java_fill_color != NULL);
-            if (path_object->is_fill_mode) {
-                path_object->fill_color = ToNativeColor(env, java_fill_color);
+            path_object->is_fill_ = (java_fill_color != NULL);
+            if (path_object->is_fill_) {
+                path_object->fill_color_ = ToNativeColor(env, java_fill_color);
             }
 
             // Get Java PathObject Stroke Color.
@@ -760,9 +761,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             jobject java_stroke_color = env->CallObjectMethod(java_page_object, get_stroke_color);
 
             // Set PathObject Data Stroke Mode and Stroke Color.
-            path_object->is_stroke = (java_stroke_color != NULL);
-            if (path_object->is_stroke) {
-                path_object->stroke_color = ToNativeColor(env, java_stroke_color);
+            path_object->is_stroke_ = (java_stroke_color != NULL);
+            if (path_object->is_stroke_) {
+                path_object->stroke_color_ = ToNativeColor(env, java_stroke_color);
             }
 
             // Get Java PathObject Stroke Width.
@@ -771,7 +772,7 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             jfloat stroke_width = env->CallFloatMethod(java_page_object, get_stroke_width);
 
             // Set PathObject Data Stroke Width.
-            path_object->stroke_width = stroke_width;
+            path_object->stroke_width_ = stroke_width;
 
             page_object = std::move(path_object);
             break;
@@ -799,7 +800,7 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             const int stride = bitmap_info.width * 4;
 
             // Set ImageObject Data Bitmap
-            image_object->bitmap = ScopedFPDFBitmap(FPDFBitmap_CreateEx(
+            image_object->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_CreateEx(
                     bitmap_info.width, bitmap_info.height, FPDFBitmap_BGRA, bitmap_pixels, stride));
 
             // Unlock the Android Bitmap
@@ -826,9 +827,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
     env->GetFloatArrayRegion(java_matrix_array, 0, 9, transform);
 
     // Set PageObject Data Matrix.
-    page_object->matrix = {transform[0 /*kMScaleX*/], transform[3 /*kMSkewY*/],
-                           transform[1 /*kMSkewX*/],  transform[4 /*kMScaleY*/],
-                           transform[2 /*kMTransX*/], transform[5 /*kMTransY*/]};
+    page_object->matrix_ = {transform[0 /*kMScaleX*/], transform[3 /*kMSkewY*/],
+                            transform[1 /*kMSkewX*/],  transform[4 /*kMScaleY*/],
+                            transform[2 /*kMTransX*/], transform[5 /*kMTransY*/]};
 
     return page_object;
 }

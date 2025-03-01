@@ -19,8 +19,6 @@
 
 #include <stdint.h>
 
-#include <vector>
-
 #include "cpp/fpdf_scopers.h"
 #include "fpdfview.h"
 
@@ -68,66 +66,16 @@ class PageObject {
 
     virtual ~PageObject();
 
-    Matrix matrix;  // Matrix used to scale, rotate, shear and translate the page object.
-    Color fill_color;
-    Color stroke_color;
-    float stroke_width = 1.0f;
+    Matrix matrix_;  // Matrix used to scale, rotate, shear and translate the page object.
+    Color fill_color_;
+    Color stroke_color_;
+    float stroke_width_ = 1.0f;
 
   protected:
     PageObject(Type type = Type::Unknown);
 
   private:
-    Type type;
-};
-
-class PathObject : public PageObject {
-  public:
-    PathObject();
-
-    ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document) override;
-    bool UpdateFPDFInstance(FPDF_PAGEOBJECT path_object) override;
-    bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object) override;
-
-    ~PathObject();
-
-    class Segment {
-      public:
-        enum class Command {
-            Unknown = 0,
-            Move,
-            Line,
-        };
-
-        Command command;
-        float x;
-        float y;
-        bool is_closed;  // Checks if the path_segment is closed
-
-        Segment(Command command, float x, float y, bool is_closed = false)
-            : command(command), x(x), y(y), is_closed(is_closed) {}
-    };
-
-    bool is_fill_mode = false;
-    bool is_stroke = false;
-
-    std::vector<Segment> segments;
-};
-
-class ImageObject : public PageObject {
-  public:
-    ImageObject();
-
-    ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document) override;
-    bool UpdateFPDFInstance(FPDF_PAGEOBJECT image_object) override;
-    bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object) override;
-
-    void* GetBitmapReadableBuffer() const;
-
-    ~ImageObject();
-
-    int width = 0;
-    int height = 0;
-    ScopedFPDFBitmap bitmap;
+    Type type_;
 };
 
 }  // namespace pdfClient
