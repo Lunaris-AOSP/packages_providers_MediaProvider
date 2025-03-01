@@ -32,11 +32,12 @@ struct Color {
     uint b;
     uint a;
 
+    Color() : Color(0, 0, 0, 255) {}
     Color(uint r, uint g, uint b, uint a) : r(r), g(g), b(b), a(a) {}
-    Color() : Color(INVALID_COLOR, INVALID_COLOR, INVALID_COLOR, INVALID_COLOR) {}
 
-  private:
-    static constexpr uint INVALID_COLOR = 256;
+    bool operator==(const Color& other) const {
+        return r == other.r && g == other.g && b == other.b && a == other.a;
+    }
 };
 
 struct Matrix {
@@ -46,23 +47,33 @@ struct Matrix {
     float d;
     float e;
     float f;
+
+    Matrix() {}
+    Matrix(float a, float b, float c, float d, float e, float f)
+        : a(a), b(b), c(c), d(d), e(e), f(f) {}
+
+    bool operator==(const Matrix& other) const {
+        return a == other.a && b == other.b && c == other.c && d == other.d && e == other.e &&
+               f == other.f;
+    }
 };
 
 class PageObject {
   public:
     enum class Type {
         Unknown = 0,
+        Text = 1,
         Path = 2,
         Image = 3,
     };
 
     Type GetType() const;
     // Returns a FPDF Instance for a PageObject.
-    virtual ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document) = 0;
+    virtual ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document, FPDF_PAGE page) = 0;
     // Updates the FPDF Instance of PageObject present on Page.
-    virtual bool UpdateFPDFInstance(FPDF_PAGEOBJECT page_object) = 0;
+    virtual bool UpdateFPDFInstance(FPDF_PAGEOBJECT page_object, FPDF_PAGE page) = 0;
     // Populates data from FPDFInstance of PageObject present on Page.
-    virtual bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT page_object) = 0;
+    virtual bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT page_object, FPDF_PAGE page) = 0;
 
     virtual ~PageObject();
 
