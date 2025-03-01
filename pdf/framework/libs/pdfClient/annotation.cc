@@ -18,7 +18,9 @@
 
 #include <utils/pdf_strings.h>
 
+#include "image_object.h"
 #include "logging.h"
+#include "path_object.h"
 
 #define LOG_TAG "annotation"
 
