@@ -28,7 +28,7 @@ namespace pdfClient {
 
 PathObject::PathObject() : PageObject(Type::Path) {}
 
-ScopedFPDFPageObject PathObject::CreateFPDFInstance(FPDF_DOCUMENT document) {
+ScopedFPDFPageObject PathObject::CreateFPDFInstance(FPDF_DOCUMENT document, FPDF_PAGE page) {
     int segment_count = segments_.size();
     if (segment_count == 0) {
         return nullptr;
@@ -66,14 +66,14 @@ ScopedFPDFPageObject PathObject::CreateFPDFInstance(FPDF_DOCUMENT document) {
     }
 
     // Update attributes of PDFium path object.
-    if (!UpdateFPDFInstance(scoped_path_object.get())) {
+    if (!UpdateFPDFInstance(scoped_path_object.get(), page)) {
         return nullptr;
     }
 
     return scoped_path_object;
 }
 
-bool PathObject::UpdateFPDFInstance(FPDF_PAGEOBJECT path_object) {
+bool PathObject::UpdateFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE page) {
     if (!path_object) {
         return false;
     }
@@ -106,7 +106,7 @@ bool PathObject::UpdateFPDFInstance(FPDF_PAGEOBJECT path_object) {
     return true;
 }
 
-bool PathObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object) {
+bool PathObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE page) {
     // Count the number of segments in the Path
     int segment_count = FPDFPath_CountSegments(path_object);
     if (segment_count == 0) {

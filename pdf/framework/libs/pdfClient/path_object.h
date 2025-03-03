@@ -33,9 +33,9 @@ class PathObject : public PageObject {
   public:
     PathObject();
 
-    ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document) override;
-    bool UpdateFPDFInstance(FPDF_PAGEOBJECT path_object) override;
-    bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object) override;
+    ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document, FPDF_PAGE page) override;
+    bool UpdateFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE page) override;
+    bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE page) override;
 
     ~PathObject();
 

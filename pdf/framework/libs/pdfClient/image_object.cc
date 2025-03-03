@@ -28,20 +28,20 @@ namespace pdfClient {
 
 ImageObject::ImageObject() : PageObject(Type::Image) {}
 
-ScopedFPDFPageObject ImageObject::CreateFPDFInstance(FPDF_DOCUMENT document) {
+ScopedFPDFPageObject ImageObject::CreateFPDFInstance(FPDF_DOCUMENT document, FPDF_PAGE page) {
     // Create a scoped PDFium image object.
     ScopedFPDFPageObject scoped_image_object(FPDFPageObj_NewImageObj(document));
     if (!scoped_image_object) {
         return nullptr;
     }
     // Update attributes of PDFium image object.
-    if (!UpdateFPDFInstance(scoped_image_object.get())) {
+    if (!UpdateFPDFInstance(scoped_image_object.get(), page)) {
         return nullptr;
     }
     return scoped_image_object;
 }
 
-bool ImageObject::UpdateFPDFInstance(FPDF_PAGEOBJECT image_object) {
+bool ImageObject::UpdateFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PAGE page) {
     if (!image_object) {
         return false;
     }
@@ -67,7 +67,7 @@ bool ImageObject::UpdateFPDFInstance(FPDF_PAGEOBJECT image_object) {
     return true;
 }
 
-bool ImageObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object) {
+bool ImageObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PAGE page) {
     // Get Bitmap
     bitmap_ = ScopedFPDFBitmap(FPDFImageObj_GetBitmap(image_object));
     if (bitmap_.get() == nullptr) {
