@@ -31,9 +31,9 @@ class ImageObject : public PageObject {
   public:
     ImageObject();
 
-    ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document) override;
-    bool UpdateFPDFInstance(FPDF_PAGEOBJECT image_object) override;
-    bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object) override;
+    ScopedFPDFPageObject CreateFPDFInstance(FPDF_DOCUMENT document, FPDF_PAGE page) override;
+    bool UpdateFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PAGE page) override;
+    bool PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PAGE page) override;
 
     void* GetBitmapReadableBuffer() const;
 

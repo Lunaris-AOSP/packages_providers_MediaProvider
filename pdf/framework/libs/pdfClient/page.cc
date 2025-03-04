@@ -37,6 +37,7 @@
 #include "normalize.h"
 #include "path_object.h"
 #include "rect.h"
+#include "text_object.h"
 #include "utf.h"
 #include "utils/annot_hider.h"
 #include "utils/text.h"
@@ -464,7 +465,7 @@ std::vector<PageObject*> Page::GetPageObjects(bool refetch) {
 
 int Page::AddPageObject(std::unique_ptr<PageObject> pageObject) {
     // Create a scoped PDFium page object.
-    ScopedFPDFPageObject scoped_page_object = pageObject->CreateFPDFInstance(document_);
+    ScopedFPDFPageObject scoped_page_object(pageObject->CreateFPDFInstance(document_, page_.get()));
 
     // Check if a FPDF page object was created.
     if (!scoped_page_object) {
@@ -511,7 +512,7 @@ bool Page::UpdatePageObject(int index, std::unique_ptr<PageObject> pageObject) {
     FPDF_PAGEOBJECT page_object = FPDFPage_GetObject(page_.get(), index);
 
     // Update PDFium PageObject
-    if (!pageObject->UpdateFPDFInstance(page_object)) {
+    if (!pageObject->UpdateFPDFInstance(page_object, page_.get())) {
         return false;
     }
 
@@ -807,6 +808,10 @@ void Page::PopulatePageObjects(bool refetch) {
         std::unique_ptr<PageObject> page_object_ = nullptr;
 
         switch (type) {
+            case FPDF_PAGEOBJ_TEXT: {
+                page_object_ = std::make_unique<TextObject>();
+                break;
+            }
             case FPDF_PAGEOBJ_PATH: {
                 page_object_ = std::make_unique<PathObject>();
                 break;
@@ -820,7 +825,7 @@ void Page::PopulatePageObjects(bool refetch) {
         }
 
         // Populate PageObject From Page
-        if (page_object_ && page_object_->PopulateFromFPDFInstance(page_object)) {
+        if (page_object_ && page_object_->PopulateFromFPDFInstance(page_object, page_.get())) {
             page_objects_[index] = std::move(page_object_);
         }
     }
@@ -880,7 +885,8 @@ void Page::PopulateAnnotations() {
             }
         }
 
-        if (!annotation || !annotation->PopulateFromPdfiumInstance(scoped_annot.get())) {
+        if (!annotation ||
+            !annotation->PopulateFromPdfiumInstance(scoped_annot.get(), page_.get())) {
             LOGE("Failed to create a pdfClient's instance of annotation using pdfium "
                  "instance");
         }
@@ -946,7 +952,7 @@ bool Page::UpdatePageAnnotation(int index, std::unique_ptr<Annotation> annotatio
         return false;
     }
 
-    if (!annotation->UpdatePdfiumInstance(scoped_annot.get(), document_)) {
+    if (!annotation->UpdatePdfiumInstance(scoped_annot.get(), document_, page_.get())) {
         LOGE("Failed to update pdfium annotation's instance");
         return false;
     }
