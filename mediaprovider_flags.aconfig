@@ -158,6 +158,15 @@ flag {
 }
 
 flag {
+    name: "enable_photopicker_datescrubber"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "This flag controls whether to enable datescrubber feature in photopicker"
+    bug: "312640456"
+    is_fixed_read_only: true
+}
+
+flag {
     name: "cloud_media_provider_search"
     is_exported: true
     namespace: "mediaprovider"
