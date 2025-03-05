@@ -328,7 +328,7 @@ TEST(Test, AddTextPageObject) {
         auto textObject = std::make_unique<TextObject>();
 
         // Set Font.
-        textObject->font_ = Font(font_names[index], true, true);
+        textObject->font_ = Font(font_names[index], static_cast<Font::Family>(index), true, true);
 
         // Set Font Size.
         textObject->font_size_ = 10.0f;

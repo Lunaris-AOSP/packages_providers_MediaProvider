@@ -29,6 +29,8 @@
 
 #define LOG_TAG "text_object"
 
+using FontFamily = pdfClient::Font::Family;
+
 namespace pdfClient {
 
 std::optional<Font> GetFont(FPDF_PAGEOBJECT text_object) {
@@ -109,8 +111,8 @@ std::optional<std::wstring> GetText(FPDF_PAGEOBJECT text_object, FPDF_PAGE page)
     return pdfClient_utils::ToWideString(p_text_buffer.get(), text_len);
 }
 
-Font::Font(std::string font_name, bool bold, bool italic)
-    : font_name_(font_name), bold_(bold), italic_(italic) {}
+Font::Font(const std::string& font_name, Family family, bool bold, bool italic)
+    : font_name_(font_name), family_(family), bold_(bold), italic_(italic) {}
 
 std::string Font::GetName() {
     std::string name = font_name_;
@@ -270,22 +272,22 @@ TextObject::~TextObject() = default;
 
 // Font Mapper
 std::unordered_map<std::string, Font> font_mapper = {
-        {Courier, Font(Courier)},
-        {Courier + Bold, Font(Courier, true)},
-        {Courier + Oblique, Font(Courier, false, true)},
-        {Courier + BoldOblique, Font(Courier, true, true)},
+        {Courier, Font(Courier, FontFamily::Courier)},
+        {Courier + Bold, Font(Courier, FontFamily::Courier, true)},
+        {Courier + Oblique, Font(Courier, FontFamily::Courier, false, true)},
+        {Courier + BoldOblique, Font(Courier, FontFamily::Courier, true, true)},
 
-        {Helvetica, Font(Helvetica)},
-        {Helvetica + Bold, Font(Helvetica, true)},
-        {Helvetica + Oblique, Font(Helvetica, false, true)},
-        {Helvetica + BoldOblique, Font(Helvetica, true, true)},
+        {Helvetica, Font(Helvetica, FontFamily::Helvetica)},
+        {Helvetica + Bold, Font(Helvetica, FontFamily::Helvetica, true)},
+        {Helvetica + Oblique, Font(Helvetica, FontFamily::Helvetica, false, true)},
+        {Helvetica + BoldOblique, Font(Helvetica, FontFamily::Helvetica, true, true)},
 
-        {TimesRoman, Font(TimesRoman)},
-        {Times + Bold, Font(Times, true)},
-        {Times + Italic, Font(Times, false, true)},
-        {Times + BoldItalic, Font(Times, true, true)},
+        {TimesRoman, Font(TimesRoman, FontFamily::TimesRoman)},
+        {Times + Bold, Font(Times, FontFamily::TimesRoman, true)},
+        {Times + Italic, Font(Times, FontFamily::TimesRoman, false, true)},
+        {Times + BoldItalic, Font(Times, FontFamily::TimesRoman, true, true)},
 
-        {Symbol, Font(Symbol)}};
+        {Symbol, Font(Symbol, FontFamily::Symbol)}};
 
 // Standard Font Names.
 std::vector<std::string> font_names = {CourierNew, Helvetica, Symbol, TimesNewRoman};

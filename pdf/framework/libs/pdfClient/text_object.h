@@ -31,15 +31,26 @@ namespace pdfClient {
 
 class Font {
   public:
-    Font() {};
-    Font(std::string font_name, bool bold = false, bool italic = false);
+    enum class Family {
+        Unknown = -1,
+        Courier,
+        Helvetica,
+        Symbol,
+        TimesRoman,
+    };
+
+    Font() : family_(Family::Unknown), bold_(false), italic_(false) {};
+    Font(const std::string& font_name, Family family = Family::Unknown, bool bold = false,
+         bool italic = false);
 
     std::string GetName();
-    bool IsBold() { return bold_; }
-    bool IsItalic() { return italic_; }
+    Family GetFamily() const { return family_; }
+    bool IsBold() const { return bold_; }
+    bool IsItalic() const { return italic_; }
 
   private:
     std::string font_name_;
+    Family family_;
     bool bold_;
     bool italic_;
 };
