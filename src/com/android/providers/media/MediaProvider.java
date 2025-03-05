@@ -574,7 +574,7 @@ public class MediaProvider extends ContentProvider {
      * Attempting to send more than 2000 uris will result in an IllegalArgumentException.
      */
     @ChangeId
-    @EnabledSince(targetSdkVersion = Build.VERSION_CODES.BAKLAVA)
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.VANILLA_ICE_CREAM)
     static final long LIMIT_CREATE_REQUEST_URIS = 203408344L;
 
     @GuardedBy("mPendingOpenInfo")
