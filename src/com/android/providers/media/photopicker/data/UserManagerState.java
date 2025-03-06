@@ -28,7 +28,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.UserProperties;
-import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
@@ -667,15 +666,9 @@ public interface UserManagerState {
         public Map<UserId, String> getProfileLabelsForAll() {
             assertMainThread();
             Map<UserId, String> profileLabels = new HashMap<>();
-            String personalTabLabel = mContext.getString(R.string.picker_personal_profile_label);
-            profileLabels.put(getSystemUser(), personalTabLabel);
-            if (SdkLevel.isAtLeastV()) {
-                for (UserId userId : mUserProfileIds) {
-                    UserHandle userHandle = userId.getUserHandle();
-                    if (userHandle.getIdentifier() != getSystemUser().getIdentifier()) {
-                        profileLabels.put(userId, getProfileLabel(userHandle));
-                    }
-                }
+            for (UserId userId : mUserProfileIds) {
+                UserHandle userHandle = userId.getUserHandle();
+                profileLabels.put(userId, getProfileLabel(userHandle));
             }
 
             return profileLabels;
@@ -683,55 +676,69 @@ public interface UserManagerState {
 
         private String getProfileLabel(UserHandle userHandle) {
             if (SdkLevel.isAtLeastV()) {
-                Context userContext = mContext.createContextAsUser(userHandle, 0 /* flags */);
                 try {
+                    Context userContext = mContext.createContextAsUser(userHandle, 0 /* flags */);
                     UserManager userManager = userContext.getSystemService(UserManager.class);
                     if (userManager == null) {
                         Log.e(TAG, "Cannot obtain user manager");
                         return null;
                     }
                     return userManager.getProfileLabel();
-                } catch (Resources.NotFoundException e) {
-                    // Todo(b/318530691): Handle the label for the profile that is not defined
-                    // already
+                } catch (IllegalStateException e) {
+                    Log.e(TAG, "could not create user context for user.", e);
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception while fetching profile badge", e);
                 }
             }
-            return null;
+
+            // Fall back case if not V, or an error encountered above, return hard coded strings.
+            boolean isPrimaryProfile = mUserManager.getProfileParent(userHandle) == null;
+            boolean isManagedProfile = mUserManager.isManagedProfile(userHandle.getIdentifier());
+
+            int resId;
+            if (isPrimaryProfile) {
+                resId = R.string.photopicker_profile_primary_label;
+            } else if (isManagedProfile) {
+                resId = R.string.photopicker_profile_managed_label;
+            } else {
+                resId = R.string.photopicker_profile_unknown_label;
+            }
+
+            return mContext.getString(resId);
         }
 
         @Override
         public Map<UserId, Drawable> getProfileBadgeForAll() {
             assertMainThread();
             Map<UserId, Drawable> profileBadges = new HashMap<>();
-            profileBadges.put(getSystemUser(), mContext.getDrawable(R.drawable.ic_personal_mode));
-            if (SdkLevel.isAtLeastV()) {
-                for (UserId userId : mUserProfileIds) {
-                    UserHandle userHandle = userId.getUserHandle();
-                    if (userHandle.getIdentifier() != getSystemUser().getIdentifier()) {
-                        profileBadges.put(userId, getProfileBadge(userHandle));
-                    }
-                }
+            for (UserId userId : mUserProfileIds) {
+                profileBadges.put(userId, getProfileBadge(userId.getUserHandle()));
             }
             return profileBadges;
         }
 
         private Drawable getProfileBadge(UserHandle userHandle) {
             if (SdkLevel.isAtLeastV()) {
-                Context userContext = mContext.createContextAsUser(userHandle, 0 /* flags */);
                 try {
+                    Context userContext = mContext.createContextAsUser(userHandle, 0 /* flags */);
                     UserManager userManager = userContext.getSystemService(UserManager.class);
                     if (userManager == null) {
                         Log.e(TAG, "Cannot obtain user manager");
                         return null;
                     }
                     return userManager.getUserBadge();
-                } catch (Resources.NotFoundException e) {
-                    // Todo(b/318530691): Handle the icon for the profile that is not defined
-                    // already
-                    Log.i(TAG, "failed to find resource");
+                } catch (IllegalStateException e) {
+                    Log.e(TAG, "could not create user context for user.", e);
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception while fetching profile badge", e);
                 }
             }
-            return null;
+
+            // Fall back case if not V, or an error encountered above, return hard coded icons.
+            boolean isManagedProfile = mUserManager.isManagedProfile(userHandle.getIdentifier());
+            int drawable =
+                    isManagedProfile ? R.drawable.ic_work_outline : R.drawable.ic_personal_mode;
+            return mContext.getDrawable(drawable);
         }
 
         @Override
