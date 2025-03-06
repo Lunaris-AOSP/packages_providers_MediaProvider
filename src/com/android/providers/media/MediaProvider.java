@@ -7783,7 +7783,8 @@ public class MediaProvider extends ContentProvider {
             String packageName = arg;
             int uid = extras.getInt(MediaStore.EXTRA_IS_SYSTEM_GALLERY_UID);
             boolean isSystemGallery = PermissionUtils.checkWriteImagesOrVideoAppOps(
-                    getContext(), uid, packageName, getContext().getAttributionTag());
+                    getContext(), uid, packageName, getContext().getAttributionTag(),
+                    /*forDataDelivery*/ false);
             Bundle res = new Bundle();
             res.putBoolean(MediaStore.EXTRA_IS_SYSTEM_GALLERY_RESPONSE, isSystemGallery);
             return res;
