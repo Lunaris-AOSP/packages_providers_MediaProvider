@@ -672,7 +672,8 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
     // Set Java PdfPageObject Matrix.
     static jmethodID set_matrix =
             env->GetMethodID(page_object_class, "setMatrix", funcsig("V", kMatrix).c_str());
-    env->CallVoidMethod(java_page_object, set_matrix, ToJavaMatrix(env, page_object->matrix_));
+    env->CallVoidMethod(java_page_object, set_matrix,
+                        ToJavaMatrix(env, page_object->device_matrix_));
 
     return java_page_object;
 }
@@ -846,9 +847,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
     env->GetFloatArrayRegion(java_matrix_array, 0, 9, transform);
 
     // Set PageObject Data Matrix.
-    page_object->matrix_ = {transform[0 /*kMScaleX*/], transform[3 /*kMSkewY*/],
-                            transform[1 /*kMSkewX*/],  transform[4 /*kMScaleY*/],
-                            transform[2 /*kMTransX*/], transform[5 /*kMTransY*/]};
+    page_object->device_matrix_ = {transform[0 /*kMScaleX*/], transform[3 /*kMSkewY*/],
+                                   transform[1 /*kMSkewX*/],  transform[4 /*kMScaleY*/],
+                                   transform[2 /*kMTransX*/], transform[5 /*kMTransY*/]};
 
     return page_object;
 }
