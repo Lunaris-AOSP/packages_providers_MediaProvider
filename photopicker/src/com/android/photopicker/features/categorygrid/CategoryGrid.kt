@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -237,6 +238,7 @@ fun CategoryButton(modifier: Modifier) {
                         imageVector =
                             ImageVector.vectorResource(R.drawable.photopicker_category_icon),
                         contentDescription = null,
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
