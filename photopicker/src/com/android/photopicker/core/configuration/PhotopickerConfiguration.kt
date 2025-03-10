@@ -147,7 +147,7 @@ data class PhotopickerConfiguration(
                                     it::class.java.getDeclaredField("targetUserId").apply {
                                         isAccessible = true
                                     }
-                                property?.get(it) as? Int
+                                property.get(it) as? Int
                             } catch (e: Exception) {
                                 when (e) {
                                     is NoSuchFieldException,
