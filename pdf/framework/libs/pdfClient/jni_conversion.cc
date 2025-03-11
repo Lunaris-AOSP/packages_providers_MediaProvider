@@ -180,6 +180,22 @@ jobject ToJavaList(JNIEnv* env, const vector<T>& input,
     return java_list;
 }
 
+template <class T>
+jobject ToJavaList(JNIEnv* env, const vector<T>& input, ICoordinateConverter* converter,
+                   jobject (*ToJavaObject)(JNIEnv* env, const T&, ICoordinateConverter* converter)) {
+    static jclass arraylist_class = GetPermClassRef(env, kArrayList);
+    static jmethodID init = env->GetMethodID(arraylist_class, "<init>", "(I)V");
+    static jmethodID add = env->GetMethodID(arraylist_class, "add", funcsig("Z", kObject).c_str());
+
+    jobject java_list = env->NewObject(arraylist_class, init, input.size());
+    for (size_t i = 0; i < input.size(); i++) {
+        jobject java_object = ToJavaObject(env, input[i], converter);
+        env->CallBooleanMethod(java_list, add, java_object);
+        env->DeleteLocalRef(java_object);
+    }
+    return java_list;
+}
+
 // Copy a C++ vector to a java ArrayList, using the given function to convert.
 template <class T>
 jobject ToJavaList(JNIEnv* env, const vector<T*>& input, ICoordinateConverter* converter,
@@ -1001,9 +1017,9 @@ jobject ToJavaPageAnnotations(JNIEnv* env, const vector<Annotation*>& annotation
 
 jobject ToJavaStampAnnotation(JNIEnv* env, const Annotation* annotation,
                               ICoordinateConverter* converter) {
-    jobject java_bounds = ToJavaRectF(env, annotation->GetBounds(), converter);
     // Cast to StampAnnotation
     const StampAnnotation* stamp_annotation = static_cast<const StampAnnotation*>(annotation);
+    jobject java_bounds = ToJavaRectF(env, stamp_annotation->GetBounds(), converter);
 
     // Find Java StampAnnotation Class.
     static jclass stamp_annotation_class = GetPermClassRef(env, kStampAnnotation);
@@ -1031,16 +1047,17 @@ jobject ToJavaStampAnnotation(JNIEnv* env, const Annotation* annotation,
 
 jobject ToJavaHighlightAnnotation(JNIEnv* env, const Annotation* annotation,
                                   ICoordinateConverter* converter) {
-    jobject java_bounds = ToJavaRectF(env, annotation->GetBounds(), converter);
     // Cast to HighlightAnnotation
     const HighlightAnnotation* highlight_annotation =
             static_cast<const HighlightAnnotation*>(annotation);
+    jobject java_bounds =
+            ToJavaList(env, highlight_annotation->GetBounds(), converter, &ToJavaRectF);
 
     // Find Java HighlightAnnotation Class.
     static jclass highlight_annotation_class = GetPermClassRef(env, kHighlightAnnotation);
     // Get Constructor Id.
     static jmethodID init =
-            env->GetMethodID(highlight_annotation_class, "<init>", funcsig("V", kRectF).c_str());
+            env->GetMethodID(highlight_annotation_class, "<init>", funcsig("V", kList).c_str());
 
     // Create Java HighlightAnnotation Instance.
     jobject java_annotation = env->NewObject(highlight_annotation_class, init, java_bounds);
@@ -1058,11 +1075,11 @@ jobject ToJavaHighlightAnnotation(JNIEnv* env, const Annotation* annotation,
 
 jobject ToJavaFreeTextAnnotation(JNIEnv* env, const Annotation* annotation,
                                  ICoordinateConverter* converter) {
-    jobject java_bounds = ToJavaRectF(env, annotation->GetBounds(), converter);
-
     // Cast to FreeText Annotation
     const FreeTextAnnotation* freetext_annotation =
             static_cast<const FreeTextAnnotation*>(annotation);
+
+    jobject java_bounds = ToJavaRectF(env, freetext_annotation->GetBounds(), converter);
     // Find Java FreeTextAnnotation class.
     static jclass freetext_annotation_class = GetPermClassRef(env, kFreeTextAnnotation);
     // Get Constructor Id.
@@ -1121,13 +1138,17 @@ jobject ToJavaPageAnnotation(JNIEnv* env, const Annotation* annotation,
 }
 
 std::unique_ptr<Annotation> ToNativeStampAnnotation(JNIEnv* env, jobject java_annotation,
-                                                    Rectangle_f native_bounds,
                                                     ICoordinateConverter* converter) {
-    // Create StampAnnotation Instance.
-    auto stamp_annotation = std::make_unique<StampAnnotation>(native_bounds);
-
     // Get Ref to Java StampAnnotation Class.
     static jclass stamp_annotation_class = GetPermClassRef(env, kStampAnnotation);
+
+    jmethodID get_bounds =
+            env->GetMethodID(stamp_annotation_class, "getBounds", funcsig(kRectF).c_str());
+    jobject java_bounds = env->CallObjectMethod(java_annotation, get_bounds);
+    Rectangle_f native_bounds = ToNativeRectF(env, java_bounds, converter);
+
+    // Create StampAnnotation Instance.
+    auto stamp_annotation = std::make_unique<StampAnnotation>(native_bounds);
 
     // Get PdfPageObjects from stamp annotation
     static jmethodID get_objects =
@@ -1149,12 +1170,29 @@ std::unique_ptr<Annotation> ToNativeStampAnnotation(JNIEnv* env, jobject java_an
 }
 
 std::unique_ptr<Annotation> ToNativeHighlightAnnotation(JNIEnv* env, jobject java_annotation,
-                                                        Rectangle_f native_bounds) {
-    // Create HighlightAnnotation Instance.
-    auto highlight_annotation = std::make_unique<HighlightAnnotation>(native_bounds);
-
+                                                        ICoordinateConverter* converter) {
     // Get Ref to Java HighlightAnnotation Class.
     static jclass highlight_annotation_class = GetPermClassRef(env, kHighlightAnnotation);
+
+    jmethodID get_bounds =
+            env->GetMethodID(highlight_annotation_class, "getBounds", funcsig(kList).c_str());
+    jobject java_bounds = env->CallObjectMethod(java_annotation, get_bounds);
+
+    vector<Rectangle_f> native_bounds;
+
+    jclass list_class = env->FindClass(kList);
+    jmethodID size_method = env->GetMethodID(list_class, "size", funcsig("I").c_str());
+    jmethodID get_method = env->GetMethodID(list_class, "get", funcsig(kObject, "I").c_str());
+
+    jint listSize = env->CallIntMethod(java_bounds, size_method);
+    for (int i = 0; i < listSize; i++) {
+        jobject java_bound = env->CallObjectMethod(java_bounds, get_method, i);
+        Rectangle_f native_bound = ToNativeRectF(env, java_bound, converter);
+        native_bounds.push_back(native_bound);
+    }
+
+    // Create HighlightAnnotation Instance.
+    auto highlight_annotation = std::make_unique<HighlightAnnotation>(native_bounds);
 
     // Get and set highlight color
 
@@ -1169,12 +1207,17 @@ std::unique_ptr<Annotation> ToNativeHighlightAnnotation(JNIEnv* env, jobject jav
 }
 
 std::unique_ptr<Annotation> ToNativeFreeTextAnnotation(JNIEnv* env, jobject java_annotation,
-                                                       Rectangle_f native_bounds) {
-    // Create FreeTextAnnotation Instance.
-    auto freetext_annotation = std::make_unique<FreeTextAnnotation>(native_bounds);
-
+                                                       ICoordinateConverter* converter) {
     // Get Ref to Java FreeTextAnnotation Class.
     static jclass freetext_annotation_class = GetPermClassRef(env, kFreeTextAnnotation);
+
+    jmethodID get_bounds =
+            env->GetMethodID(freetext_annotation_class, "getBounds", funcsig(kRectF).c_str());
+    jobject java_bounds = env->CallObjectMethod(java_annotation, get_bounds);
+    Rectangle_f native_bounds = ToNativeRectF(env, java_bounds, converter);
+
+    // Create FreeTextAnnotation Instance.
+    auto freetext_annotation = std::make_unique<FreeTextAnnotation>(native_bounds);
 
     // Get the TextContent from Java layer.
     static jmethodID get_text_content =
@@ -1211,24 +1254,19 @@ std::unique_ptr<Annotation> ToNativePageAnnotation(JNIEnv* env, jobject java_ann
             env->GetMethodID(annotation_class, "getPdfAnnotationType", funcsig("I").c_str());
     jint annotation_type = env->CallIntMethod(java_annotation, get_type);
 
-    // 2. Get bounds
-    jmethodID get_bounds = env->GetMethodID(annotation_class, "getBounds", funcsig(kRectF).c_str());
-    jobject java_bounds = env->CallObjectMethod(java_annotation, get_bounds);
-    Rectangle_f native_bounds = ToNativeRectF(env, java_bounds, converter);
-
     std::unique_ptr<Annotation> annotation = nullptr;
 
     switch (static_cast<Annotation::Type>(annotation_type)) {
         case Annotation::Type::Stamp: {
-            annotation = ToNativeStampAnnotation(env, java_annotation, native_bounds, converter);
+            annotation = ToNativeStampAnnotation(env, java_annotation, converter);
             break;
         }
         case Annotation::Type::Highlight: {
-            annotation = ToNativeHighlightAnnotation(env, java_annotation, native_bounds);
+            annotation = ToNativeHighlightAnnotation(env, java_annotation, converter);
             break;
         }
         case Annotation::Type::FreeText: {
-            annotation = ToNativeFreeTextAnnotation(env, java_annotation, native_bounds);
+            annotation = ToNativeFreeTextAnnotation(env, java_annotation, converter);
             break;
         }
         default:
