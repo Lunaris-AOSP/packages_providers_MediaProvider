@@ -57,7 +57,7 @@ bool ImageObject::UpdateFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PAGE pag
     }
 
     // Set the updated matrix.
-    if (!FPDFPageObj_SetMatrix(image_object, reinterpret_cast<FS_MATRIX*>(&matrix_))) {
+    if (!SetDeviceToPageMatrix(image_object, page)) {
         return false;
     }
 
@@ -75,7 +75,7 @@ bool ImageObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PA
     }
 
     // Get Matrix
-    if (!FPDFPageObj_GetMatrix(image_object, reinterpret_cast<FS_MATRIX*>(&matrix_))) {
+    if (!GetPageToDeviceMatrix(image_object, page)) {
         return false;
     }
 
