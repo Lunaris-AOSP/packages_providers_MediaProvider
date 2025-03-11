@@ -479,10 +479,15 @@ private fun SearchInput(
 }
 
 @Composable
-private fun RequestFocusOnResume(focusRequester: FocusRequester, focused: Boolean) {
+private fun RequestFocusOnResume(
+    focusRequester: FocusRequester,
+    focused: Boolean,
+    viewModel: SearchViewModel = obtainViewModel(),
+) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val searchState by viewModel.searchState.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
-        when (focused) {
+        when (focused && searchState is SearchState.Inactive) {
             true ->
                 lifecycleOwner.repeatOnLifecycle(state = Lifecycle.State.RESUMED) {
                     focusRequester.requestFocus()
@@ -789,7 +794,11 @@ fun SuggestionItem(suggestion: SearchSuggestion) {
         }
         val text = suggestion.displayText ?: ""
         Text(text = text, modifier = Modifier.padding(start = MEASUREMENT_LARGE_PADDING).weight(1f))
-        if (suggestion.type != SearchSuggestionType.FACE && suggestion.icon != null) {
+        if (
+            suggestion.type != SearchSuggestionType.FACE &&
+                suggestion.type != SearchSuggestionType.HISTORY &&
+                suggestion.icon != null
+        ) {
             ShowSuggestionIcon(suggestion, Modifier.size(MEASUREMENT_OTHER_ICON).clip(CircleShape))
         }
     }
