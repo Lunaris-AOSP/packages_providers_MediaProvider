@@ -291,3 +291,12 @@ flag {
     bug: "352528913"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "enable_local_media_provider_capabilities"
+    namespace: "mediaprovider"
+    description: "This flag controls the Capabilities APIs in the local media provider, i.e. PhotoPickerProvider."
+    bug: "402379523"
+    is_fixed_read_only: true
+    is_exported: true
+}
