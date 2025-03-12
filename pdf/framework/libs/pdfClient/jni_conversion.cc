@@ -652,19 +652,19 @@ jobject ToJavaPdfPathObject(JNIEnv* env, const PathObject* path_object,
     // Set Java PdfPathObject FillColor.
     if (path_object->is_fill_) {
         static jmethodID set_fill_color =
-                env->GetMethodID(path_object_class, "setFillColor", funcsig("V", kColor).c_str());
+                env->GetMethodID(path_object_class, "setFillColor", funcsig("V", "I").c_str());
 
         env->CallVoidMethod(java_path_object, set_fill_color,
-                            ToJavaColor(env, path_object->fill_color_));
+                            ToJavaColorInt(path_object->fill_color_));
     }
 
     // Set Java PdfPathObject StrokeColor.
     if (path_object->is_stroke_) {
         static jmethodID set_stroke_color =
-                env->GetMethodID(path_object_class, "setStrokeColor", funcsig("V", kColor).c_str());
+                env->GetMethodID(path_object_class, "setStrokeColor", funcsig("V", "I").c_str());
 
         env->CallVoidMethod(java_path_object, set_stroke_color,
-                            ToJavaColor(env, path_object->stroke_color_));
+                            ToJavaColorInt(path_object->stroke_color_));
     }
 
     // Set Java Stroke Width.
@@ -903,24 +903,24 @@ std::unique_ptr<PathObject> ToNativePathObject(JNIEnv* env, jobject java_path_ob
 
     // Get Java PathObject Fill Color.
     static jmethodID get_fill_color =
-            env->GetMethodID(path_object_class, "getFillColor", funcsig(kColor).c_str());
-    jobject java_fill_color = env->CallObjectMethod(java_path_object, get_fill_color);
+            env->GetMethodID(path_object_class, "getFillColor", funcsig("I").c_str());
+    jint java_fill_color = env->CallIntMethod(java_path_object, get_fill_color);
 
     // Set PathObject Data Fill Mode and Fill Color
-    path_object->is_fill_ = (java_fill_color != NULL);
+    path_object->is_fill_ = (java_fill_color != 0);
     if (path_object->is_fill_) {
-        path_object->fill_color_ = ToNativeColor(env, java_fill_color);
+        path_object->fill_color_ = ToNativeColor(java_fill_color);
     }
 
     // Get Java PathObject Stroke Color.
     static jmethodID get_stroke_color =
-            env->GetMethodID(path_object_class, "getStrokeColor", funcsig(kColor).c_str());
-    jobject java_stroke_color = env->CallObjectMethod(java_path_object, get_stroke_color);
+            env->GetMethodID(path_object_class, "getStrokeColor", funcsig("I").c_str());
+    jint java_stroke_color = env->CallIntMethod(java_path_object, get_stroke_color);
 
     // Set PathObject Data Stroke Mode and Stroke Color.
-    path_object->is_stroke_ = (java_stroke_color != NULL);
+    path_object->is_stroke_ = (java_stroke_color != 0);
     if (path_object->is_stroke_) {
-        path_object->stroke_color_ = ToNativeColor(env, java_stroke_color);
+        path_object->stroke_color_ = ToNativeColor(java_stroke_color);
     }
 
     // Get Java PathObject Stroke Width.
