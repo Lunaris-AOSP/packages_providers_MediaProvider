@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+#include <algorithm>
+
 #include "cpp/fpdf_scopers.h"
 #include "fpdfview.h"
 
