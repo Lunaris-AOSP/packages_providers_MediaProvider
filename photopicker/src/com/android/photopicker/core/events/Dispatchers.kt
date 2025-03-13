@@ -49,18 +49,18 @@ fun dispatchReportPhotopickerApiInfoEvent(
     val sessionId = photopickerConfiguration.sessionId
     // We always launch the picker in collapsed state. We track the state change as UI event.
     val pickerSize = Telemetry.PickerSize.COLLAPSED
-    val mediaFilters =
-        photopickerConfiguration.mimeTypes
-            .map { mimeType ->
-                when {
-                    mimeType.contains("image") && mimeType.contains("video") ->
-                        Telemetry.MediaType.PHOTO_VIDEO
-                    mimeType.startsWith("image/") -> Telemetry.MediaType.PHOTO
-                    mimeType.startsWith("video/") -> Telemetry.MediaType.VIDEO
-                    else -> Telemetry.MediaType.UNSET_MEDIA_TYPE
-                }
-            }
-            .ifEmpty { listOf(Telemetry.MediaType.UNSET_MEDIA_TYPE) }
+    val mimeTypes = photopickerConfiguration.mimeTypes
+    val mediaFilter =
+        when {
+            mimeTypes.size > 1 &&
+                mimeTypes.any { it.startsWith("image/") } &&
+                mimeTypes.any { it.startsWith("video/") } -> Telemetry.MediaType.PHOTO_VIDEO
+            mimeTypes.size == 1 && mimeTypes.first().startsWith("image/") ->
+                Telemetry.MediaType.PHOTO
+            mimeTypes.size == 1 && mimeTypes.first().startsWith("video/") ->
+                Telemetry.MediaType.VIDEO
+            else -> Telemetry.MediaType.UNSET_MEDIA_TYPE
+        }
     val maxPickedItemsCount = photopickerConfiguration.selectionLimit
     val selectedTab =
         when (photopickerConfiguration.startDestination) {
@@ -80,28 +80,26 @@ fun dispatchReportPhotopickerApiInfoEvent(
     val isCloudSearchEnabled = lazyFeatureManager.get().isFeatureEnabled(SearchFeature::class.java)
     // TODO(b/376822503): Update when search is added
     val isLocalSearchEnabled = false
-    for (mediaFilter in mediaFilters) {
-        coroutineScope.launch {
-            lazyEvents
-                .get()
-                .dispatch(
-                    Event.ReportPhotopickerApiInfo(
-                        dispatcherToken = dispatcherToken,
-                        sessionId = sessionId,
-                        pickerIntentAction = pickerIntentAction,
-                        pickerSize = pickerSize,
-                        mediaFilter = mediaFilter,
-                        maxPickedItemsCount = maxPickedItemsCount,
-                        selectedTab = selectedTab,
-                        selectedAlbum = selectedAlbum,
-                        isOrderedSelectionSet = isOrderedSelectionSet,
-                        isAccentColorSet = isAccentColorSet,
-                        isDefaultTabSet = isDefaultTabSet,
-                        isCloudSearchEnabled = isCloudSearchEnabled,
-                        isLocalSearchEnabled = isLocalSearchEnabled,
-                    )
+    coroutineScope.launch {
+        lazyEvents
+            .get()
+            .dispatch(
+                Event.ReportPhotopickerApiInfo(
+                    dispatcherToken = dispatcherToken,
+                    sessionId = sessionId,
+                    pickerIntentAction = pickerIntentAction,
+                    pickerSize = pickerSize,
+                    mediaFilter = mediaFilter,
+                    maxPickedItemsCount = maxPickedItemsCount,
+                    selectedTab = selectedTab,
+                    selectedAlbum = selectedAlbum,
+                    isOrderedSelectionSet = isOrderedSelectionSet,
+                    isAccentColorSet = isAccentColorSet,
+                    isDefaultTabSet = isDefaultTabSet,
+                    isCloudSearchEnabled = isCloudSearchEnabled,
+                    isLocalSearchEnabled = isLocalSearchEnabled,
                 )
-        }
+            )
     }
 }
 
