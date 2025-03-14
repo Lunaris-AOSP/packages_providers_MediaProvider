@@ -20,6 +20,8 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.UserProperties
+import android.media.ApplicationMediaCapabilities
+import android.media.MediaFeature.HdrType
 import android.net.Uri
 import android.os.Parcel
 import android.os.UserHandle
@@ -39,6 +41,7 @@ import com.android.photopicker.core.events.dispatchPhotopickerExpansionStateChan
 import com.android.photopicker.core.events.dispatchReportPhotopickerApiInfoEvent
 import com.android.photopicker.core.events.dispatchReportPhotopickerMediaItemStatusEvent
 import com.android.photopicker.core.events.dispatchReportPhotopickerSessionInfoEvent
+import com.android.photopicker.core.events.dispatchReportPickerAppMediaCapabilities
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureToken
@@ -390,6 +393,7 @@ class DispatchersTest {
                 isDefaultTabSet = false,
                 isCloudSearchEnabled = cloudSearch,
                 isLocalSearchEnabled = false,
+                isTranscodingRequested = false,
             )
 
         // Action
@@ -441,6 +445,7 @@ class DispatchersTest {
                 isDefaultTabSet = false,
                 isCloudSearchEnabled = cloudSearch,
                 isLocalSearchEnabled = false,
+                isTranscodingRequested = false,
             )
 
         // Action
@@ -492,6 +497,7 @@ class DispatchersTest {
                 isDefaultTabSet = false,
                 isCloudSearchEnabled = cloudSearch,
                 isLocalSearchEnabled = false,
+                isTranscodingRequested = false,
             )
 
         // Action
@@ -543,6 +549,7 @@ class DispatchersTest {
                 isDefaultTabSet = false,
                 isCloudSearchEnabled = cloudSearch,
                 isLocalSearchEnabled = false,
+                isTranscodingRequested = false,
             )
 
         // Action
@@ -558,5 +565,43 @@ class DispatchersTest {
         // Assert
         assertThat(eventsDispatched).contains(expectedEvent)
         assertThat(expectedEvent.mediaFilter).isEqualTo(telemetryMimeTypeMapping)
+    }
+
+    @Test
+    fun testDispatchReportPickerAppMediaCapabilities() = runTest {
+        // Setup
+        setup(testScope = this)
+
+        val capabilities =
+            ApplicationMediaCapabilities.Builder().addUnsupportedHdrType(HdrType.HDR10).build()
+
+        val photopickerConfiguration =
+            TestPhotopickerConfiguration.build {
+                action(value = "")
+                sessionId(value = sessionId)
+                callingPackageUid(value = packageUid)
+                runtimeEnv(value = PhotopickerRuntimeEnv.EMBEDDED)
+                appMediaCapabilities(capabilities)
+            }
+
+        val expectedEvent =
+            Event.ReportPickerAppMediaCapabilities(
+                dispatcherToken = FeatureToken.CORE.token,
+                sessionId = sessionId,
+                supportedHdrTypes = intArrayOf(),
+                unsupportedHdrTypes = intArrayOf(Telemetry.HdrTypes.HDR10_UNSUPPORTED.type),
+            )
+
+        // Action
+        dispatchReportPickerAppMediaCapabilities(
+            coroutineScope = backgroundScope,
+            lazyEvents = lazyEvents,
+            photopickerConfiguration = photopickerConfiguration,
+        )
+        advanceTimeBy(delayTimeMillis = 50)
+
+        // Assert
+        assertThat(eventsDispatched.size).isEqualTo(1)
+        assertThat(eventsDispatched.get(0).toString()).isEqualTo(expectedEvent.toString())
     }
 }
