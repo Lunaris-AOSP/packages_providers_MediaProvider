@@ -282,3 +282,12 @@ flag {
     is_fixed_read_only: true
     bug: "376910932"
 }
+
+flag {
+    name: "enable_oem_metadata_update"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "Controls ability to update oem_metadata column"
+    bug: "352528913"
+    is_fixed_read_only: true
+}
