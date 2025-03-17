@@ -514,6 +514,17 @@ public class MediaProvider extends ContentProvider {
     @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.VANILLA_ICE_CREAM)
     public static final long ENABLE_OWNED_PHOTOS = 310703690L;
 
+
+    /**
+     * Excludes unreliable storage volumes from being included in
+     * {@link MediaStore#getExternalVolumeNames(Context)}.
+     */
+    @ChangeId
+    @EnabledSince(targetSdkVersion = Build.VERSION_CODES.CUR_DEVELOPMENT)
+    @VisibleForTesting
+    // TODO: b/402623169 Set CUR_DEVELOPMENT as the latest version once available
+    static final long EXCLUDE_UNRELIABLE_STORAGE_VOLUMES = 391360514L;
+
     /**
      * Set of {@link Cursor} columns that refer to raw filesystem paths.
      */
