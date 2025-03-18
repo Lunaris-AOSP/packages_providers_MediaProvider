@@ -23,10 +23,12 @@ import android.content.pm.UserProperties
 import android.media.ApplicationMediaCapabilities
 import android.media.MediaFeature.HdrType
 import android.net.Uri
+import android.os.Build
 import android.os.Parcel
 import android.os.UserHandle
 import android.os.UserManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.modules.utils.build.SdkLevel
@@ -567,6 +569,7 @@ class DispatchersTest {
         assertThat(expectedEvent.mediaFilter).isEqualTo(telemetryMimeTypeMapping)
     }
 
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
     @Test
     fun testDispatchReportPickerAppMediaCapabilities() = runTest {
         // Setup
