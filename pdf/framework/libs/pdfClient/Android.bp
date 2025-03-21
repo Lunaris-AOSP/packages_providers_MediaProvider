@@ -108,7 +108,7 @@ cc_test {
 
     static_libs: [
         "libbase_ndk",
-        "libpdfium_static_android_r_compatible",
+        "libpdfium_static",
     ],
 
     shared_libs: [
@@ -116,6 +116,7 @@ cc_test {
         "libjnigraphics",
         "libdl",
         "libft2",
+        "libicu",
         "libjpeg",
         "libz",
     ],
