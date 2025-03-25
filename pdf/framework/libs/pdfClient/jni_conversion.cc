@@ -25,6 +25,7 @@
 #include "text_object.h"
 
 using pdfClient::Annotation;
+using pdfClient::BitmapFormat;
 using pdfClient::Color;
 using pdfClient::Document;
 using pdfClient::Font;
@@ -450,7 +451,41 @@ jobject ToJavaGotoLinks(JNIEnv* env, const vector<GotoLink>& links) {
     return ToJavaList(env, links, &ToJavaGotoLink);
 }
 
-jobject ToJavaBitmap(JNIEnv* env, void* buffer, int width, int height) {
+void ConvertBgrToRgba(uint32_t* rgba_pixel_array, uint8_t* bgr_pixel_array, size_t rgba_stride,
+                      size_t bgr_stride, size_t width, size_t height) {
+    for (size_t y = 0; y < height; y++) {
+        uint32_t* rgba_row_ptr = rgba_pixel_array + y * (rgba_stride / 4);
+        uint8_t* bgr_row_ptr = bgr_pixel_array + y * (bgr_stride);
+        for (size_t x = 0; x < width; x++) {
+            // Extract BGR components stored.
+            uint8_t blue = bgr_row_ptr[x * 3];
+            uint8_t green = bgr_row_ptr[x * 3 + 1];
+            uint8_t red = bgr_row_ptr[x * 3 + 2];
+            // Storing java bitmap components RGBA in little-endian.
+            rgba_row_ptr[x] = (0xFF << 24) | (blue << 16) | (green << 8) | red;
+        }
+    }
+}
+
+void ConvertBgraToRgba(uint32_t* rgba_pixel_array, uint8_t* bgra_pixel_array, size_t rgba_stride,
+                       size_t bgra_stride, size_t width, size_t height, bool ignore_alpha) {
+    for (size_t y = 0; y < height; y++) {
+        uint32_t* rgba_row_ptr = rgba_pixel_array + y * (rgba_stride / 4);
+        uint8_t* bgra_row_ptr = bgra_pixel_array + y * (bgra_stride);
+        for (size_t x = 0; x < width; x++) {
+            // Extract BGR components and determine alpha based on ignore_alpha flag.
+            uint8_t blue = bgra_row_ptr[x * 4];
+            uint8_t green = bgra_row_ptr[x * 4 + 1];
+            uint8_t red = bgra_row_ptr[x * 4 + 2];
+            uint8_t alpha = ignore_alpha ? 0xFF : bgra_row_ptr[x * 4 + 3];
+            // Storing java bitmap components RGBA in little-endian.
+            rgba_row_ptr[x] = (alpha << 24) | (blue << 16) | (green << 8) | red;
+        }
+    }
+}
+
+jobject ToJavaBitmap(JNIEnv* env, void* buffer, BitmapFormat bitmap_format, size_t width,
+                     size_t height, size_t native_stride) {
     // Find Java Bitmap class
     static jclass bitmap_class = GetPermClassRef(env, kBitmap);
 
@@ -469,16 +504,41 @@ jobject ToJavaBitmap(JNIEnv* env, void* buffer, int width, int height) {
     jobject java_bitmap =
             env->CallStaticObjectMethod(bitmap_class, create_bitmap, width, height, argb8888);
 
-    // Lock the Bitmap pixels for copying
+    // Copy the buffer data into java bitmap.
+    AndroidBitmapInfo bitmap_info;
+    AndroidBitmap_getInfo(env, java_bitmap, &bitmap_info);
+    size_t java_stride = bitmap_info.stride;
+
     void* bitmap_pixels;
     if (AndroidBitmap_lockPixels(env, java_bitmap, &bitmap_pixels) < 0) {
         return NULL;
     }
 
-    // Copy the buffer data into java Bitmap.
-    std::memcpy(bitmap_pixels, buffer, width * height);  // 4 bytes per pixel (ARGB_8888)
+    uint32_t* java_pixel_array = static_cast<uint32_t*>(bitmap_pixels);
+    uint8_t* native_pixel_array = static_cast<uint8_t*>(buffer);
+    switch (bitmap_format) {
+        case BitmapFormat::BGR: {
+            ConvertBgrToRgba(java_pixel_array, native_pixel_array, java_stride, native_stride,
+                             width, height);
+            break;
+        }
+        case BitmapFormat::BGRA: {
+            ConvertBgraToRgba(java_pixel_array, native_pixel_array, java_stride, native_stride,
+                              width, height, false);
+            break;
+        }
+        case BitmapFormat::BGRx: {
+            ConvertBgraToRgba(java_pixel_array, native_pixel_array, java_stride, native_stride,
+                              width, height, true);
+            break;
+        }
+        default: {
+            LOGE("Bitmap format unknown!");
+            AndroidBitmap_unlockPixels(env, java_bitmap);
+            return NULL;
+        }
+    }
 
-    // Unlock the Bitmap pixels
     AndroidBitmap_unlockPixels(env, java_bitmap);
 
     return java_bitmap;
@@ -682,11 +742,17 @@ jobject ToJavaPdfImageObject(JNIEnv* env, const ImageObject* image_object) {
     static jmethodID init_image =
             env->GetMethodID(image_object_class, "<init>", funcsig("V", kBitmap).c_str());
 
-    // Get Bitmap readable buffer from ImageObject Data.
-    void* buffer = image_object->GetBitmapReadableBuffer();
-
     // Create Java Bitmap from Native Bitmap Buffer.
-    jobject java_bitmap = ToJavaBitmap(env, buffer, image_object->width_, image_object->height_);
+    void* buffer = image_object->GetBitmapBuffer();
+    BitmapFormat bitmap_format = image_object->bitmap_format_;
+    size_t width = image_object->width_;
+    size_t height = image_object->height_;
+    int stride = FPDFBitmap_GetStride(image_object->bitmap_.get());
+    jobject java_bitmap = ToJavaBitmap(env, buffer, bitmap_format, width, height, stride);
+    if (java_bitmap == NULL) {
+        LOGE("To java bitmap conversion failed!");
+        return NULL;
+    }
 
     // Create Java PdfImageObject Instance.
     jobject java_image_object = env->NewObject(image_object_class, init_image, java_bitmap);
@@ -934,6 +1000,23 @@ std::unique_ptr<PathObject> ToNativePathObject(JNIEnv* env, jobject java_path_ob
     return path_object;
 }
 
+void CopyRgbaToBgra(uint8_t* rgba_pixel_array, size_t rgba_stride, uint32_t* bgra_pixel_array,
+                    size_t bgra_stride, size_t width, size_t height) {
+    for (size_t y = 0; y < height; y++) {
+        uint8_t* rgba_row_ptr = rgba_pixel_array + y * rgba_stride;
+        uint32_t* bgra_row_ptr = bgra_pixel_array + y * (bgra_stride / 4);
+        for (size_t x = 0; x < width; x++) {
+            // Extract RGBA components stored.
+            uint8_t red = rgba_row_ptr[x * 4];
+            uint8_t green = rgba_row_ptr[x * 4 + 1];
+            uint8_t blue = rgba_row_ptr[x * 4 + 2];
+            uint8_t alpha = rgba_row_ptr[x * 4 + 3];
+            // Storing native bitmap components BGRA in little-endian.
+            bgra_row_ptr[x] = (alpha << 24) | (red << 16) | (green << 8) | blue;
+        }
+    }
+}
+
 std::unique_ptr<ImageObject> ToNativeImageObject(JNIEnv* env, jobject java_image_object) {
     // Create ImageObject Data Instance.
     auto image_object = std::make_unique<ImageObject>();
@@ -946,21 +1029,34 @@ std::unique_ptr<ImageObject> ToNativeImageObject(JNIEnv* env, jobject java_image
             env->GetMethodID(image_object_class, "getBitmap", funcsig(kBitmap).c_str());
     jobject java_bitmap = env->CallObjectMethod(java_image_object, get_bitmap);
 
-    // Create an FPDF_BITMAP from the Android Bitmap.
+    // Get android bitmap info.
+    AndroidBitmapInfo bitmap_info;
+    AndroidBitmap_getInfo(env, java_bitmap, &bitmap_info);
+    if (bitmap_info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
+        LOGE("Android bitmap is not in RGBA_8888 format");
+        return nullptr;
+    }
+    size_t bitmap_width = bitmap_info.width;
+    size_t bitmap_height = bitmap_info.height;
+    size_t java_stride = bitmap_info.stride;
+
+    // Create ImageObject data bitmap.
+    image_object->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_Create(bitmap_width, bitmap_height, 1));
+    size_t native_stride = FPDFBitmap_GetStride(image_object->bitmap_.get());
+
+    // Copy pixels from android bitmap.
     void* bitmap_pixels;
     if (AndroidBitmap_lockPixels(env, java_bitmap, &bitmap_pixels) < 0) {
+        LOGE("Android bitmap lock pixels failed!");
         return nullptr;
     }
 
-    AndroidBitmapInfo bitmap_info;
-    AndroidBitmap_getInfo(env, java_bitmap, &bitmap_info);
-    const int stride = bitmap_info.width * 4;
+    uint8_t* java_pixel_array = static_cast<uint8_t*>(bitmap_pixels);
+    uint32_t* native_pixel_array = static_cast<uint32_t*>(image_object->GetBitmapBuffer());
 
-    // Set ImageObject Data Bitmap
-    image_object->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_CreateEx(
-            bitmap_info.width, bitmap_info.height, FPDFBitmap_BGRA, bitmap_pixels, stride));
+    CopyRgbaToBgra(java_pixel_array, java_stride, native_pixel_array, native_stride, bitmap_width,
+                   bitmap_height);
 
-    // Unlock the Android Bitmap
     AndroidBitmap_unlockPixels(env, java_bitmap);
 
     return image_object;
